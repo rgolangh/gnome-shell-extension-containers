@@ -1,1 +1,8 @@
-{"name": "Containers Tray", "description": "Manage containers through a shell menu", "uuid": "containers_tray@rgolan", "shell-version": ["3.28.3"]}
+{
+  "name": "containers",
+  "description": "Manage containers through a gnome-shell menu",
+  "uuid": "containers@rgolan",
+  "shell-version": [
+    "3.28.3"
+  ]
+}
