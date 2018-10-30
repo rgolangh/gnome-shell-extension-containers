@@ -10,21 +10,24 @@ const Lang = imports.lang;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 
+let _containersMenu;
+
 function init() {
     log("starting");
 }
 
-let _containersMenu;
-
 function enable() {
     log("enabling");
-    _containersMenu= new ContainersMenu; 
+    _containersMenu = new ContainersMenu;
     Main.panel.addToStatusArea('containers-menu', _containersMenu);
 }
 
-// Triggered when extension is disabled
 function disable() {
     _containersMenu.destroy();
+}
+
+function createIcon(name, styleClass) {
+    return new St.Icon({ icon_name: name, style_class: styleClass, icon_size: '14' });
 }
 
 const ContainersMenu = new Lang.Class({
@@ -41,7 +44,7 @@ const ContainersMenu = new Lang.Class({
         hbox.add_child(icon);
         hbox.add_child(PopupMenu.arrowIcon(St.Side.BOTTOM));
         this.actor.add_child(hbox);
-        this.actor.connect('button_press_event', Lang.bind(this, ()=> {
+        this.actor.connect('button_press_event', Lang.bind(this, () => {
             if (this.menu.isOpen) {
                 this.menu.removeAll();
                 this._renderMenu();
@@ -69,7 +72,7 @@ const ContainersMenu = new Lang.Class({
             log(errMsg);
             log(err);
         }
-	this.actor.show();
+        this.actor.show();
     }
 });
 
@@ -100,13 +103,11 @@ const getContainers = () => {
         .map((s) => {
             return JSON.parse(s);
         });
-    log("containers returned " + typeof(ret) + " " + JSON.stringify(ret)  + "----" + out);
+    log("containers returned " + typeof (ret) + " " + JSON.stringify(ret) + "----" + out);
     return ret;
 };
 
-const createIcon = (name, styleClass) => new St.Icon({ icon_name: name, style_class: styleClass, icon_size: '14' });
-
-const runCommand = function(command, containerName) { 
+const runCommand = function (command, containerName) {
     const cmdline = "podman " + command + " " + containerName;
     log("running command " + cmdline);
     const [res, out, err, status] = GLib.spawn_command_line_sync(cmdline);
@@ -121,11 +122,11 @@ const runCommand = function(command, containerName) {
     return out;
 }
 
-const   PopupMenuItem = new Lang.Class({
+const PopupMenuItem = new Lang.Class({
     Name: 'PopupMenuItem',
     Extends: PopupMenu.PopupMenuItem,
 
-    _init: function(label) {
+    _init: function (label) {
         this.parent(label);
         this.actor.add_style_class_name("container-extension-subMenuItem");
     }
@@ -137,10 +138,8 @@ const ContainerMenuItem = new Lang.Class({
 
     _init: function (containerName, command) {
         this.parent(command);
-
         this.containerName = containerName;
         this.command = command;
-
         this.connect('activate', Lang.bind(this, this._action));
     },
 
@@ -152,15 +151,10 @@ const ContainerMenuItem = new Lang.Class({
 const ContainerSubMenuMenuItem = new Lang.Class({
     Name: 'ContainerSubMenuMenuItem',
     Extends: PopupMenu.PopupSubMenuMenuItem,
-   
-    _init: function(container) {
+
+    _init: function (container) {
         log("constructor " + container);
         this.parent(container.Names);
-        log("constructor post parent");
-
-        // this.menu.addMenuItem(new PopupMenu.PopupMenu(this.actor, container.ID));
-        log("post addmenu - log the container " + container.Names + " id:" + container.ID);
-
         this.menu.addMenuItem(new PopupMenuItem("Id" + ": " + container.ID));
         this.menu.addMenuItem(new PopupMenuItem("Image" + ": " + container.Image));
         this.menu.addMenuItem(new PopupMenuItem("Command" + ": " + container.Command));
@@ -170,7 +164,6 @@ const ContainerSubMenuMenuItem = new Lang.Class({
         // add more stats and info - inspect - SLOW
         const out = runCommand("inspect --format '{{json .}}'", container.Names)
         const inspect = JSON.parse(String.fromCharCode.apply(String, out).trim());
-        log("post inspect " + JSON.stringify(inspect));
         this.menu.addMenuItem(new PopupMenuItem("IP Address: " + JSON.stringify(inspect.NetworkSettings.IPAddress)));
         // end of inspect
 
@@ -178,7 +171,7 @@ const ContainerSubMenuMenuItem = new Lang.Class({
             case "Exited":
             case "Created":
             case "stopped":
-                log("action "+ container.Status);
+                log("action " + container.Status);
                 this.actor.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
                 const startMeunItem = new ContainerMenuItem(container.Names, "start");
                 startMeunItem.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-stopped'), 1);
@@ -187,10 +180,7 @@ const ContainerSubMenuMenuItem = new Lang.Class({
                 rmMenuItem.actor.insert_child_at_index(createIcon('user-trash-symbolic', 'status-stopped'), 1);
                 this.menu.addMenuItem(rmMenuItem);
                 break;
-            
             case "Up":
-            case "running":
-                log("action "+ container.Status);
                 this.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-running'), 1);
                 const pauseMenuIten = new ContainerMenuItem(container.Names, "pause");
                 pauseMenuIten.actor.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-stopped'), 1);
@@ -199,15 +189,13 @@ const ContainerSubMenuMenuItem = new Lang.Class({
                 stopMenuItem.actor.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
                 this.menu.addMenuItem(stopMenuItem);
                 break;
-            case "paused":
-                log("action "+ container.Status);
+            case "Paused":
                 this.actor.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-paused'), 1);
                 const unpauseMenuItem = new ContainerMenuItem(container.Names, "unpause");
                 unpauseMenuItem.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-paused'), 1)
                 this.menu.addMenuItem(unpauseMenuItem);
                 break;
             default:
-                log("action "+ container.Status);
                 this.actor.insert_child_at_index(createIcon('action-unavailable-symbolic', 'status-undefined'), 1);
                 break;
         }
