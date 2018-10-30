@@ -1,7 +1,7 @@
 {
-  "name": "containers",
+  "name": "Containers",
   "description": "Manage containers through a gnome-shell menu",
-  "uuid": "containers@rgolan",
+  "uuid": "containers@royg",
   "shell-version": [
     "3.28.3"
   ]
