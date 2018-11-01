@@ -174,10 +174,10 @@ const ContainerSubMenuMenuItem = new Lang.Class({
                 log("action " + container.Status);
                 this.actor.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
                 const startMeunItem = new ContainerMenuItem(container.Names, "start");
-                startMeunItem.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-stopped'), 1);
+                startMeunItem.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-start'), 1);
                 this.menu.addMenuItem(startMeunItem);
                 const rmMenuItem = new ContainerMenuItem(container.Names, "rm");
-                rmMenuItem.actor.insert_child_at_index(createIcon('user-trash-symbolic', 'status-stopped'), 1);
+                rmMenuItem.actor.insert_child_at_index(createIcon('user-trash-symbolic', 'status-remove'), 1);
                 this.menu.addMenuItem(rmMenuItem);
                 break;
             case "Up":
@@ -192,7 +192,7 @@ const ContainerSubMenuMenuItem = new Lang.Class({
             case "Paused":
                 this.actor.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-paused'), 1);
                 const unpauseMenuItem = new ContainerMenuItem(container.Names, "unpause");
-                unpauseMenuItem.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-paused'), 1)
+                unpauseMenuItem.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-start'), 1)
                 this.menu.addMenuItem(unpauseMenuItem);
                 break;
             default:

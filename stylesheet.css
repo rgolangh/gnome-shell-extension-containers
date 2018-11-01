@@ -1,3 +1,23 @@
 .container-extension-subMenuItem {
 	padding-left: 20px;
 }
+
+.status-running {
+	color: lawngreen;
+}
+
+.status-start {
+	color: lawngreen;
+}
+
+.status-stopped {
+	color: red;
+}
+
+.status-remove {
+	color: LightSlateGray;
+}
+
+.status-undefined {
+	color: SkyBlue;
+}
