@@ -160,7 +160,7 @@ const ContainerSubMenuMenuItem = new Lang.Class({
         this.menu.addMenuItem(new PopupMenuItem("Command" + ": " + container.Command));
         this.menu.addMenuItem(new PopupMenuItem("Created" + ": " + container.Created));
         this.menu.addMenuItem(new PopupMenuItem("Ports" + ": " + container.Size));
-        this.menu.addMenuItem(new PopupMenuItem("Labels" + ": " + container.Labels));
+        this.menu.addMenuItem(new PopupMenuItem("Labels" + ": " + container.Labels.replace(/\,/gi, '\n')));
         // add more stats and info - inspect - SLOW
         const out = runCommand("inspect --format '{{json .}}'", container.Names)
         const inspect = JSON.parse(String.fromCharCode.apply(String, out).trim());
