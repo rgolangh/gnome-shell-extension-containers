@@ -81,17 +81,20 @@ class ContainersMenu extends PanelMenu.Button {
 });
 
 /* getContainers return a json array containers in the form of 
-{ "ID": "7a9e1233db51",
-  "Image": "localhost/image-name:latest",
-  "Command": "/entrypoint.sh bash",
-  "CreatedAtTime": "2018-10-10T10:14:47.884563227+03:00",
-  "Created": "2 weeks ago",
-  "Status": "Created",
-  "Ports": "",
-  "Size": "",
-  "Names": "sleepy_shockley",
-  "Labels": "key=value,"
-}
+[
+    {
+        "ID": "7a9e1233db51",
+        "Image": "localhost/image-name:latest",
+        "Command": "/entrypoint.sh bash",
+        "CreatedAtTime": "2018-10-10T10:14:47.884563227+03:00",
+        "Created": "2 weeks ago",
+        "Status": "Created",
+        "Ports": "",
+        "Size": "",
+        "Names": "sleepy_shockley",
+        "Labels": "key=value,"
+    },
+]
 */
 const getContainers = () => {
     const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
@@ -100,15 +103,8 @@ const getContainers = () => {
         log(status);
         throw new Error("Error occurred when fetching containers");
     }
-    const ret = String.fromCharCode
-        .apply(String, out)
-        .trim()
-        .split("\n")
-        .map((s) => {
-            return JSON.parse(s);
-        });
-    log("containers returned " + typeof (ret) + " " + JSON.stringify(ret) + "----" + out);
-    return ret;
+    debug(out);
+    return JSON.parse(out);
 };
 
 const runCommand = function (command, containerName) {
@@ -159,8 +155,8 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
         // this.menu.addMenuItem(new PopupMenuItem("Labels" + ": " + container.Labels.replace(/\,/gi, '\n')));
         // add more stats and info - inspect - SLOW
         const out = runCommand("inspect --format json", container.Names)
-        const inspect = JSON.parse(String.fromCharCode.apply(String, out).trim());
-        this.menu.addMenuItem(new PopupMenuItem("IP Address: " + JSON.stringify(inspect.NetworkSettings.IPAddress)));
+        const inspect = JSON.parse(out);
+        this.menu.addMenuItem(new PopupMenuItem("IP Address: " + JSON.stringify(inspect[0].NetworkSettings.IPAddress)));
         // end of inspect
 
         switch (container.Status.split(" ")[0]) {
