@@ -9,34 +9,39 @@ const GLib = imports.gi.GLib;
 const Lang = imports.lang;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
+const GObject = imports.gi.GObject;
 
-let _containersMenu;
+let containersMenu;
 
-function init() {
-    log("starting");
+let debugIsEnabled = false;
+
+function debug(obj) {
+    if (debugIsEnabled) {
+        log("object is " + obj);
+    }
 }
 
 function enable() {
-    log("enabling");
-    _containersMenu = new ContainersMenu;
-    Main.panel.addToStatusArea('containers-menu', _containersMenu);
+    log("enabling containers extension");
+    containersMenu = new ContainersMenu();
+    debug(containersMenu);
+    containersMenu.renderMenu();
+    Main.panel.addToStatusArea('containers-menu', containersMenu);
 }
 
 function disable() {
-    _containersMenu.destroy();
+    log("disabling containers extension");
+    containersMenu.destroy();
 }
 
 function createIcon(name, styleClass) {
     return new St.Icon({ icon_name: name, style_class: styleClass, icon_size: '14' });
 }
 
-const ContainersMenu = new Lang.Class({
-    Name: 'ContainersMenu',
-    Extends: PanelMenu.Button,
-
-    _init: function () {
-        this.parent(0.0, _("Containers"));
-        log("starting");
+const ContainersMenu = GObject.registerClass(
+class ContainersMenu extends PanelMenu.Button {
+    _init() {
+        super._init(0.0, "Containers");
         const hbox = new St.BoxLayout({ style_class: 'panel-status-menu-box' });
         const gicon = Gio.icon_new_for_string(Me.path + "/podman-icon.png");
         const icon = new St.Icon({ gicon: gicon, icon_size: '24' });
@@ -47,20 +52,19 @@ const ContainersMenu = new Lang.Class({
         this.actor.connect('button_press_event', Lang.bind(this, () => {
             if (this.menu.isOpen) {
                 this.menu.removeAll();
-                this._renderMenu();
+                this.renderMenu();
             }
         }));
+    }
 
-        this._renderMenu();
-    },
-
-    _renderMenu: function () {
+    renderMenu() {
         try {
             const containers = getContainers();
+            log("found " + containers.length + " containers");
             if (containers.length > 0) {
                 containers.forEach((container) => {
-                    const subMenu = new ContainerSubMenuMenuItem(container);
-                    log("submenu " + subMenu);
+                    debug(container);
+                    const subMenu = new ContainerSubMenuMenuItem(container, container.Names);
                     this.menu.addMenuItem(subMenu);
                 });
             } else {
@@ -119,48 +123,40 @@ const runCommand = function (command, containerName) {
         log(errMsg);
         log(err);
     }
+    debug(out);
     return out;
 }
 
-const PopupMenuItem = new Lang.Class({
-    Name: 'PopupMenuItem',
-    Extends: PopupMenu.PopupMenuItem,
-
-    _init: function (label) {
-        this.parent(label);
+const PopupMenuItem = class extends PopupMenu.PopupMenuItem {
+    constructor(label) {
+        super(label);
         this.actor.add_style_class_name("container-extension-subMenuItem");
     }
-})
+}
 
-const ContainerMenuItem = new Lang.Class({
-    Name: 'ContainerMenuItem',
-    Extends: PopupMenuItem,
-
-    _init: function (containerName, command) {
-        this.parent(command);
+const ContainerMenuItem = class extends PopupMenuItem {
+    constructor(containerName, command) {
+        super(command);
         this.containerName = containerName;
         this.command = command;
         this.connect('activate', Lang.bind(this, this._action));
-    },
+    }
 
-    _action: function () {
+    _action() {
         runCommand(this.command, this.containerName);
     }
-});
+};
 
-const ContainerSubMenuMenuItem = new Lang.Class({
-    Name: 'ContainerSubMenuMenuItem',
-    Extends: PopupMenu.PopupSubMenuMenuItem,
-
-    _init: function (container) {
-        log("constructor " + container);
-        this.parent(container.Names);
+var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
+    constructor(container, name) {
+        log("constructor " + container.Names);
+        super(container.Names);
         this.menu.addMenuItem(new PopupMenuItem("Id" + ": " + container.ID));
         this.menu.addMenuItem(new PopupMenuItem("Image" + ": " + container.Image));
         this.menu.addMenuItem(new PopupMenuItem("Command" + ": " + container.Command));
         this.menu.addMenuItem(new PopupMenuItem("Created" + ": " + container.Created));
-        this.menu.addMenuItem(new PopupMenuItem("Ports" + ": " + container.Size));
-        this.menu.addMenuItem(new PopupMenuItem("Labels" + ": " + container.Labels.replace(/\,/gi, '\n')));
+        this.menu.addMenuItem(new PopupMenuItem("Ports" + ": " + container.Ports));
+        // this.menu.addMenuItem(new PopupMenuItem("Labels" + ": " + container.Labels.replace(/\,/gi, '\n')));
         // add more stats and info - inspect - SLOW
         const out = runCommand("inspect --format json", container.Names)
         const inspect = JSON.parse(String.fromCharCode.apply(String, out).trim());
@@ -200,4 +196,4 @@ const ContainerSubMenuMenuItem = new Lang.Class({
                 break;
         }
     }
-});
+};
