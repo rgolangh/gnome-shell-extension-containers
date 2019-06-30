@@ -1,6 +1,6 @@
 {
   "name": "Containers",
-  "description": "Manage containers through a gnome-shell menu",
+  "description": "Manage containers through a gnome-shell menu. https://github.com/rgolangh/gnome-shell-extension-containers",
   "uuid": "containers@royg",
   "shell-version": [
     "3.28.3"
