@@ -90,7 +90,7 @@ const ContainersMenu = new Lang.Class({
 }
 */
 const getContainers = () => {
-    const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format '{{json .}}'");
+    const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
     if (status !== 0) {
         log(err);
         log(status);
@@ -162,7 +162,7 @@ const ContainerSubMenuMenuItem = new Lang.Class({
         this.menu.addMenuItem(new PopupMenuItem("Ports" + ": " + container.Size));
         this.menu.addMenuItem(new PopupMenuItem("Labels" + ": " + container.Labels.replace(/\,/gi, '\n')));
         // add more stats and info - inspect - SLOW
-        const out = runCommand("inspect --format '{{json .}}'", container.Names)
+        const out = runCommand("inspect --format json", container.Names)
         const inspect = JSON.parse(String.fromCharCode.apply(String, out).trim());
         this.menu.addMenuItem(new PopupMenuItem("IP Address: " + JSON.stringify(inspect.NetworkSettings.IPAddress)));
         // end of inspect
