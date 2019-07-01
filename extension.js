@@ -147,16 +147,20 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
     constructor(container, name) {
         log("constructor " + container.Names);
         super(container.Names);
+        this.menu.addMenuItem(new PopupMenuItem("Status" + ": " + container.Status));
         this.menu.addMenuItem(new PopupMenuItem("Id" + ": " + container.ID));
         this.menu.addMenuItem(new PopupMenuItem("Image" + ": " + container.Image));
         this.menu.addMenuItem(new PopupMenuItem("Command" + ": " + container.Command));
         this.menu.addMenuItem(new PopupMenuItem("Created" + ": " + container.Created));
         this.menu.addMenuItem(new PopupMenuItem("Ports" + ": " + container.Ports));
-        // this.menu.addMenuItem(new PopupMenuItem("Labels" + ": " + container.Labels.replace(/\,/gi, '\n')));
+        // this.menu.addMenuItem(new PopupMenuItem("Labels" + ": " + [].join(container.Labels.));
         // add more stats and info - inspect - SLOW
         const out = runCommand("inspect --format json", container.Names)
         const inspect = JSON.parse(out);
-        this.menu.addMenuItem(new PopupMenuItem("IP Address: " + JSON.stringify(inspect[0].NetworkSettings.IPAddress)));
+        if (inspect.length > 0 && inspect[0].NetworkSettings != null) {
+            this.menu.addMenuItem(
+                new PopupMenuItem("IP Address: " + JSON.stringify(inspect[0].NetworkSettings.IPAddress)));
+        }
         // end of inspect
 
         switch (container.Status.split(" ")[0]) {
