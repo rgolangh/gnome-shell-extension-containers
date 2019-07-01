@@ -1,4 +1,8 @@
-.container-extension-subMenuItem {
+.containers-extension-menu {
+	width: 350px;
+}
+
+.containers-extension-subMenuItem {
 	padding-left: 20px;
 }
 

@@ -42,6 +42,7 @@ const ContainersMenu = GObject.registerClass(
 class ContainersMenu extends PanelMenu.Button {
     _init() {
         super._init(0.0, "Containers");
+        this.menu.box.add_style_class_name('containers-extension-menu');
         const hbox = new St.BoxLayout({ style_class: 'panel-status-menu-box' });
         const gicon = Gio.icon_new_for_string(Me.path + "/podman-icon.png");
         const icon = new St.Icon({ gicon: gicon, icon_size: '24' });
@@ -126,7 +127,7 @@ const runCommand = function (command, containerName) {
 const PopupMenuItem = class extends PopupMenu.PopupMenuItem {
     constructor(label) {
         super(label);
-        this.actor.add_style_class_name("container-extension-subMenuItem");
+        this.actor.add_style_class_name("containers-extension-subMenuItem");
     }
 }
 
