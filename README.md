@@ -4,9 +4,17 @@
 
 The underlying management is being done by podman.
 
-Installation:
+# Install from gnome-shell:
 
-You can head to [gnome extensions page](https://extensions.gnome.org/extension/1500/containers/) or run this manually for the latest: 
+You can head to [gnome extensions page](https://extensions.gnome.org/extension/1500/containers/)  
+
+# Install from source:
+
+First pick the right branch by the gnome-shell-X.XX version:
+master - follows the gnome-shell shipped with latest fedora release, e.g fedora 30 is 3.32.2
+gnome-shell-3.28.2 
+...
+
 ```
 git clone https://github.com/rgolangh/gnome-shell-extension-containers \
           ~/.local/share/gnome-shell/extensions/containers@rgolan
