@@ -125,8 +125,15 @@ const runCommand = function (command, containerName) {
 }
 
 const PopupMenuItem = class extends PopupMenu.PopupMenuItem {
-    constructor(label) {
-        super(label);
+    constructor(label, value) {
+        if (value === undefined) {
+            super(label);
+        } else {
+            super(`${label}: ${value}`);
+            this.actor.connect('button_press_event', Lang.bind(this, function(){
+                setClipboard(value);
+            }, false));
+        }
         this.actor.add_style_class_name("containers-extension-subMenuItem");
     }
 }
@@ -148,19 +155,19 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
     constructor(container, name) {
         log("constructor " + container.Names);
         super(container.Names);
-        this.menu.addMenuItem(new PopupMenuItem("Status" + ": " + container.Status));
-        this.menu.addMenuItem(new PopupMenuItem("Id" + ": " + container.ID));
-        this.menu.addMenuItem(new PopupMenuItem("Image" + ": " + container.Image));
-        this.menu.addMenuItem(new PopupMenuItem("Command" + ": " + container.Command));
-        this.menu.addMenuItem(new PopupMenuItem("Created" + ": " + container.Created));
-        this.menu.addMenuItem(new PopupMenuItem("Ports" + ": " + container.Ports));
-        // this.menu.addMenuItem(new PopupMenuItem("Labels" + ": " + [].join(container.Labels.));
+        this.menu.addMenuItem(new PopupMenuItem("Status", container.Status));
+        this.menu.addMenuItem(new PopupMenuItem("Id", container.ID));
+        this.menu.addMenuItem(new PopupMenuItem("Image", container.Image));
+        this.menu.addMenuItem(new PopupMenuItem("Command", container.Command));
+        this.menu.addMenuItem(new PopupMenuItem("Created", container.Created));
+        this.menu.addMenuItem(new PopupMenuItem("Ports", container.Ports));
+        // this.menu.addMenuItem(new PopupMenuItem("Labels", [].join(container.Labels.));
         // add more stats and info - inspect - SLOW
         const out = runCommand("inspect --format json", container.Names)
         const inspect = JSON.parse(out);
         if (inspect.length > 0 && inspect[0].NetworkSettings != null) {
             this.menu.addMenuItem(
-                new PopupMenuItem("IP Address: " + JSON.stringify(inspect[0].NetworkSettings.IPAddress)));
+                new PopupMenuItem("IP Address", JSON.stringify(inspect[0].NetworkSettings.IPAddress)));
         }
         // end of inspect
 
@@ -198,3 +205,7 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
         }
     }
 };
+
+function setClipboard(text) {
+    St.Clipboard.get_default().set_text(St.ClipboardType.PRIMARY, text);
+}
