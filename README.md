@@ -11,10 +11,12 @@ You can head to [gnome extensions page](https://extensions.gnome.org/extension/1
 # Install from source
 
 First pick the right branch by the gnome-shell-X.XX version: 
+
 | branch | gnome-shell version |
-| master | 3.32.2|
-| 3.28.3 | 3.28.3|
-...
+| --- | --- |
+| master | 3.32.2 |
+| 3.28.3 | 3.28.3 |
+
 
 ```
 git clone https://github.com/rgolangh/gnome-shell-extension-containers \
@@ -24,7 +26,7 @@ git clone https://github.com/rgolangh/gnome-shell-extension-containers \
 To enable the extension use gnome-tweak-tool -> Extensions -> toggle 'Containers'
 or:
 ```bash
-gnome-shell-extension-tool -r containers@royg
+gnome-shell-extension-tool -e containers@royg
 ```
 <p>
   <img src="screenshot.png" width="350" title="gnome-shell-extension-containers">
