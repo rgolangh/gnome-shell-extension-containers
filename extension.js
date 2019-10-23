@@ -99,13 +99,17 @@ class ContainersMenu extends PanelMenu.Button {
 */
 const getContainers = () => {
     const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
-    if (status !== 0) {
+    if (!res) {
         log(err);
         log(status);
         throw new Error("Error occurred when fetching containers");
     }
     debug(out);
-    return JSON.parse(out);
+    const containers = JSON.parse(out);
+    if (containers == null) {
+        return {};
+    }
+    return containers;
 };
 
 const runCommand = function (command, containerName) {
