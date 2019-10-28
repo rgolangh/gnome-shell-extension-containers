@@ -4,9 +4,9 @@
 
 The underlying management is being done by podman.
 
-# Install using your broweser 
+# Install using your browser 
 
-You can head to [gnome extensions page](https://extensions.gnome.org/extension/1500/containers/)  
+See the [gnome extensions page](https://extensions.gnome.org/extension/1500/containers/)  
 
 # Install from source
 
