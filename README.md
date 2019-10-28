@@ -1,8 +1,12 @@
 # gnome-shell-extension-containers
 
-'containers' is a gnome-shell extension to manage linux container, run by [libpod](https://github.com/containers/libpod).
+**Containers** is a gnome-shell extension to manage linux container, run by [libpod](https://github.com/containers/libpod) and https://podman.io
 
-The underlying management is being done by podman.
+Supported actions:
+- start a stopped container
+- stop a container
+- remove a container
+- view and copy most of the `inspect` info
 
 # Install using your browser 
 
