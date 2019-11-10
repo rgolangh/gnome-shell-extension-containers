@@ -13,11 +13,11 @@ const GObject = imports.gi.GObject;
 
 let containersMenu;
 
-let debugIsEnabled = false;
+let debugEnabled = false;
 
 function debug(obj) {
-    if (debugIsEnabled) {
-        log("object is " + obj);
+    if (debugEnabled) {
+        log(`[DEBUG] object is ${obj}`);
     }
 }
 
@@ -49,8 +49,8 @@ class ContainersMenu extends PanelMenu.Button {
 
         hbox.add_child(icon);
         hbox.add_child(PopupMenu.arrowIcon(St.Side.BOTTOM));
-        this.actor.add_child(hbox);
-        this.actor.connect('button_press_event', Lang.bind(this, () => {
+        this.add_child(hbox);
+        this.connect('button_press_event', Lang.bind(this, () => {
             if (this.menu.isOpen) {
                 this.menu.removeAll();
                 this.renderMenu();
@@ -61,7 +61,7 @@ class ContainersMenu extends PanelMenu.Button {
     renderMenu() {
         try {
             const containers = getContainers();
-            log("found " + containers.length + " containers");
+            log(`found ${containers.length} containers`);
             if (containers.length > 0) {
                 containers.forEach((container) => {
                     debug(container);
@@ -72,12 +72,11 @@ class ContainersMenu extends PanelMenu.Button {
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem("No containers detected"));
             }
         } catch (err) {
-            const errMsg = "Error occurred when fetching containers";
+            const errMsg = _("Error occurred when fetching containers");
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
-            log(errMsg);
-            log(err);
+            log(`${errMsg}: ${err}`);
         }
-        this.actor.show();
+        this.show();
     }
 });
 
@@ -100,9 +99,8 @@ class ContainersMenu extends PanelMenu.Button {
 const getContainers = () => {
     const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
     if (!res) {
-        log(err);
-        log(status);
-        throw new Error("Error occurred when fetching containers");
+        log(`status: ${status}, error: ${err}`);
+        throw new Error(_("Error occurred when fetching containers"));
     }
     debug(out);
     const containers = JSON.parse(out);
@@ -113,13 +111,13 @@ const getContainers = () => {
 };
 
 const runCommand = function (command, containerName) {
-    const cmdline = "podman " + command + " " + containerName;
-    log("running command " + cmdline);
+    const cmdline = `podman ${command} ${containerName}`;
+    log(`running command ${cmdline}`);
     const [res, out, err, status] = GLib.spawn_command_line_sync(cmdline);
     if (status === 0) {
-        log("`" + command + "` on " + containerName + " terminated successfully");
+        log(`command on ${containerName} terminated successfully`);
     } else {
-        const errMsg = _("Error occurred when running `" + command + "` on container " + containerName);
+        const errMsg = _(`Error occurred when running ${command} on container ${containerName}`);
         Main.notify(errMsg);
         log(errMsg);
         log(err);
@@ -134,11 +132,11 @@ const PopupMenuItem = class extends PopupMenu.PopupMenuItem {
             super(label);
         } else {
             super(`${label}: ${value}`);
-            this.actor.connect('button_press_event', Lang.bind(this, function(){
+            this.connect('button_press_event', Lang.bind(this, () => {
                 setClipboard(value);
             }, false));
         }
-        this.actor.add_style_class_name("containers-extension-subMenuItem");
+        this.add_style_class_name("containers-extension-subMenuItem");
     }
 }
 
@@ -147,17 +145,14 @@ const ContainerMenuItem = class extends PopupMenuItem {
         super(command);
         this.containerName = containerName;
         this.command = command;
-        this.connect('activate', Lang.bind(this, this._action));
-    }
-
-    _action() {
-        runCommand(this.command, this.containerName);
+        this.connect('activate', Lang.bind(this, () => {
+            runCommand(this.command, this.containerName);
+	}));
     }
 };
 
 var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
     constructor(container, name) {
-        log("constructor " + container.Names);
         super(container.Names);
         this.menu.addMenuItem(new PopupMenuItem("Status", container.Status));
         this.menu.addMenuItem(new PopupMenuItem("Id", container.ID));
@@ -165,46 +160,41 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
         this.menu.addMenuItem(new PopupMenuItem("Command", container.Command));
         this.menu.addMenuItem(new PopupMenuItem("Created", container.Created));
         this.menu.addMenuItem(new PopupMenuItem("Ports", container.Ports));
-        // this.menu.addMenuItem(new PopupMenuItem("Labels", [].join(container.Labels.));
         // add more stats and info - inspect - SLOW
-        const out = runCommand("inspect --format json", container.Names)
-        const inspect = JSON.parse(out);
-        if (inspect.length > 0 && inspect[0].NetworkSettings != null) {
-            this.menu.addMenuItem(
-                new PopupMenuItem("IP Address", JSON.stringify(inspect[0].NetworkSettings.IPAddress)));
-        }
+        this.connect("button_press_event", Lang.bind(this, () => {
+            inspect(container.Names, this.menu);
+	}));
         // end of inspect
 
         switch (container.Status.split(" ")[0]) {
             case "Exited":
             case "Created":
             case "stopped":
-                log("action " + container.Status);
-                this.actor.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
+                this.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
                 const startMeunItem = new ContainerMenuItem(container.Names, "start");
-                startMeunItem.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-start'), 1);
+                startMeunItem.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-start'), 1);
                 this.menu.addMenuItem(startMeunItem);
                 const rmMenuItem = new ContainerMenuItem(container.Names, "rm");
-                rmMenuItem.actor.insert_child_at_index(createIcon('user-trash-symbolic', 'status-remove'), 1);
+                rmMenuItem.insert_child_at_index(createIcon('user-trash-symbolic', 'status-remove'), 1);
                 this.menu.addMenuItem(rmMenuItem);
                 break;
             case "Up":
-                this.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-running'), 1);
+                this.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-running'), 1);
                 const pauseMenuIten = new ContainerMenuItem(container.Names, "pause");
-                pauseMenuIten.actor.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-stopped'), 1);
+                pauseMenuIten.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-stopped'), 1);
                 this.menu.addMenuItem(pauseMenuIten);
                 const stopMenuItem = new ContainerMenuItem(container.Names, "stop");
-                stopMenuItem.actor.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
+                stopMenuItem.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
                 this.menu.addMenuItem(stopMenuItem);
                 break;
             case "Paused":
-                this.actor.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-paused'), 1);
+                this.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-paused'), 1);
                 const unpauseMenuItem = new ContainerMenuItem(container.Names, "unpause");
-                unpauseMenuItem.actor.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-start'), 1)
+                unpauseMenuItem.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-start'), 1)
                 this.menu.addMenuItem(unpauseMenuItem);
                 break;
             default:
-                this.actor.insert_child_at_index(createIcon('action-unavailable-symbolic', 'status-undefined'), 1);
+                this.insert_child_at_index(createIcon('action-unavailable-symbolic', 'status-undefined'), 1);
                 break;
         }
     }
@@ -213,3 +203,13 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
 function setClipboard(text) {
     St.Clipboard.get_default().set_text(St.ClipboardType.PRIMARY, text);
 }
+
+function inspect(container, menu) {
+    let out = runCommand("inspect --format json", container);
+    let inspect = JSON.parse(out);
+    if (inspect.length > 0 && inspect[0].NetworkSettings != null) {
+        menu.addMenuItem(
+            new PopupMenuItem("IP Address", JSON.stringify(inspect[0].NetworkSettings.IPAddress)));
+    }
+}
+
