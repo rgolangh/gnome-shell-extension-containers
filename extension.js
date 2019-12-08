@@ -186,6 +186,9 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
                 const stopMenuItem = new ContainerMenuItem(container.Names, "stop");
                 stopMenuItem.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
                 this.menu.addMenuItem(stopMenuItem);
+                const restartMenuItem = new ContainerMenuItem(container.Names, "restart");
+                restartMenuItem.insert_child_at_index(createIcon('system-reboot-symbolic', 'status-restart'), 1);
+                this.menu.addMenuItem(restartMenuItem);
                 break;
             case "Paused":
                 this.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-paused'), 1);
