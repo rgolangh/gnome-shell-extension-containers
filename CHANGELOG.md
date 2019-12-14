@@ -2,6 +2,9 @@
 2019-12-15
 ==================
 
+  * Update README with better building instructions
+  * Add stats menu action
+  * Change Rsh to Shell
   * Add CHANGLOG
   * Update the screenshot
   * Add shell action
