@@ -10,7 +10,6 @@ const Lang = imports.lang;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const GObject = imports.gi.GObject;
-const Gtk = imports.gi.Gtk;
 
 let containersMenu;
 
@@ -127,6 +126,22 @@ const runCommand = function (command, containerName) {
     return out;
 }
 
+const runCommandInTerminal = function (command, containerName, args) {
+    const cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
+    log(`running command ${cmdline}`);
+    const [res, out, err, status] = GLib.spawn_command_line_async(cmdline);
+    if (status === 0) {
+        log(`command on ${containerName} terminated successfully`);
+    } else {
+        const errMsg = _(`Error occurred when running ${command} on container ${containerName}`);
+        Main.notify(errMsg);
+        log(errMsg);
+        log(err);
+    }
+    debug(out);
+    return out;
+}
+
 const PopupMenuItem = class extends PopupMenu.PopupMenuItem {
     constructor(label, value) {
         if (value === undefined) {
@@ -163,6 +178,20 @@ const ContainerMenuWithOutputItem = class extends PopupMenuItem {
 	    }));
     }
 };
+
+const ContainerMenuItemWithTerminalAction = class extends PopupMenuItem {
+    constructor(label, containerName, command, args) {
+        super(label);
+        this.containerName = containerName;
+        this.command = command;
+        this.args = args;
+        this.connect('activate', Lang.bind(this, () => {
+            runCommandInTerminal(this.command, this.containerName, this.args);
+	    }));
+    }
+};
+
+
 var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
     constructor(container, name) {
         super(container.Names);
@@ -201,6 +230,7 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
                 const restartMenuItem = new ContainerMenuItem(container.Names, "restart");
                 restartMenuItem.insert_child_at_index(createIcon('system-reboot-symbolic', 'status-restart'), 1);
                 this.menu.addMenuItem(restartMenuItem);
+                this.menu.addMenuItem(createTopMenuItem(container));
                 break;
             case "Paused":
                 this.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-paused'), 1);
@@ -259,4 +289,11 @@ function gnomeOpenHander(out) {
     } finally {
         // close file?
     }
+}
+
+
+function createTopMenuItem(container) {
+    const i = new ContainerMenuItemWithTerminalAction("top", container.Names, "watch podman top", "");
+    i.insert_child_at_index(createIcon('view-reveal-symbolic.symbolic', 'action-top'), 1);
+    return i;
 }

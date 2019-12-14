@@ -25,3 +25,11 @@
 .status-undefined {
 	color: SkyBlue;
 }
+
+.action-sh {
+	color: greenyellow;
+}
+
+.action-log {
+	color: gray;
+}
