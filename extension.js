@@ -231,6 +231,7 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
                 restartMenuItem.insert_child_at_index(createIcon('system-reboot-symbolic', 'status-restart'), 1);
                 this.menu.addMenuItem(restartMenuItem);
                 this.menu.addMenuItem(createTopMenuItem(container));
+                this.menu.addMenuItem(createRshMenuItem(container));
                 break;
             case "Paused":
                 this.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-paused'), 1);
@@ -297,3 +298,11 @@ function createTopMenuItem(container) {
     i.insert_child_at_index(createIcon('view-reveal-symbolic.symbolic', 'action-top'), 1);
     return i;
 }
+
+function createRshMenuItem(container) {
+    const i = new ContainerMenuItemWithTerminalAction("sh", container.Names, "podman exec -it", "/bin/sh");
+    //i.insert_child_at_index(createIcon('go-next-symbolic.symbolic', 'action-sh'), 1);
+    i.insert_child_at_index(new St.Label({ style_class: 'action-sh', text: ">_" }), 1);
+    return i;
+}
+
