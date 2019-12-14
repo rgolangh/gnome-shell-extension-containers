@@ -232,6 +232,7 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
                 this.menu.addMenuItem(restartMenuItem);
                 this.menu.addMenuItem(createTopMenuItem(container));
                 this.menu.addMenuItem(createShellMenuItem(container));
+                this.menu.addMenuItem(createStatsMenuItem(container));
                 break;
             case "Paused":
                 this.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-paused'), 1);
@@ -302,6 +303,12 @@ function createTopMenuItem(container) {
 function createShellMenuItem(container) {
     const i = new ContainerMenuItemWithTerminalAction("sh", container.Names, "podman exec -it", "/bin/sh");
     i.insert_child_at_index(new St.Label({ style_class: 'action-sh', text: ">_" }), 1);
+    return i;
+}
+
+function createStatsMenuItem(container) {
+    const i = new ContainerMenuItemWithTerminalAction("stats", container.Names, "podman stats", "");
+    i.insert_child_at_index(new St.Label({ style_class: 'action-stats', text: "%" }), 1);
     return i;
 }
 
