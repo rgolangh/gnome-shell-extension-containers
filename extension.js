@@ -10,6 +10,7 @@ const Lang = imports.lang;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const GObject = imports.gi.GObject;
+const Gtk = imports.gi.Gtk;
 
 let containersMenu;
 
@@ -147,10 +148,21 @@ const ContainerMenuItem = class extends PopupMenuItem {
         this.command = command;
         this.connect('activate', Lang.bind(this, () => {
             runCommand(this.command, this.containerName);
-	}));
+	    }));
     }
 };
 
+const ContainerMenuWithOutputItem = class extends PopupMenuItem {
+    constructor(containerName, command, outputHdndler) {
+        super(command);
+        this.containerName = containerName;
+        this.command = command;
+        this.connect('activate', Lang.bind(this, () => {
+            var out = runCommand(this.command, this.containerName);
+            outputHdndler(out);
+	    }));
+    }
+};
 var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
     constructor(container, name) {
         super(container.Names);
@@ -200,6 +212,10 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
                 this.insert_child_at_index(createIcon('action-unavailable-symbolic', 'status-undefined'), 1);
                 break;
         }
+
+        // add log button
+        const logMenuItem = createLogMenuItem(container);
+        this.menu.addMenuItem(logMenuItem);
     }
 };
 
@@ -216,3 +232,31 @@ function inspect(container, menu) {
     }
 }
 
+function createLogMenuItem(container) {
+    let i = new ContainerMenuWithOutputItem(container.ID, "logs", gnomeOpenHander);
+    i.insert_child_at_index(createIcon('document-open-symbolic.symbolic', 'action-logs'), 1)
+    return i
+}
+
+function gnomeOpenHander(out) {
+    // let gnome-open handle the output of out
+    const [tmp, stream] = Gio.file_new_tmp(null);
+    try {
+        let r = GLib.file_set_contents(tmp.get_path(), out);;
+        debug(`result of writing output to file: ${r}`);
+        let cmdline = "gnome-open " + tmp.get_path();
+        const [res, stdout, err, status] = GLib.spawn_command_line_async(cmdline);
+        if (status === 0) {
+            debug("gnome-open command ran successfully");
+        } else {
+            const errMsg = _(`Error occurred when running ${cmdline}`);
+            Main.notify(errMsg);
+            log(errMsg);
+            log(err);
+        }
+    } catch (e) {
+      log(e);
+    } finally {
+        // close file?
+    }
+}
