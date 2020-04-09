@@ -297,40 +297,10 @@ function inspect(container, menu) {
 }
 
 function createLogMenuItem(container) {
-    //let i = new ContainerMenuWithOutputItem(container.ID, "logs", gnomeOpenHander);
-    let i = new ContainerMenuItemWithTerminalAction("logs", "", `less -f <(podman logs ${container.Names})`, "");
+    let i = new ContainerMenuItemWithTerminalAction("logs", "", `podman logs -f ${container.Names}`, "");
     i.insert_child_at_index(createIcon('document-open-symbolic.symbolic', 'action-logs'), 1)
     return i
 }
-
-function gnomeOpenHander(out) {
-    // let gnome-open handle the output of out
-    const f = Gio.File.new_tmp(null);
-    if (f == null) {
-	debug("failed opening a temp file");
-	return;
-    }
-    try {
-        const cmdline = "gnome-open " + f[0].get_path();
-	f[0].replace_contents(out, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-        const [res, stdout, err, status] = GLib.spawn_command_line_async(cmdline);
-        if (status === 0) {
-            debug("gnome-open command ran successfully");
-        } else {
-            const errMsg = _(`Error occurred when running ${cmdline}`);
-            Main.notify(errMsg);
-            info(errMsg);
-            info(err);
-        }
-    } catch (e) {
-      info(e);
-    } finally {
-        // close file?
-	info("about to delete file " + f[0].get_path());
-	f.delete();
-    }
-}
-
 
 function createTopMenuItem(container) {
     const i = new ContainerMenuItemWithTerminalAction("top", container.Names, "watch podman top", "");
