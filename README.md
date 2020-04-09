@@ -14,14 +14,7 @@ See the [gnome extensions page](https://extensions.gnome.org/extension/1500/cont
 
 # Install from source
 
-First pick the right branch by the gnome-shell-X.XX version: 
-
-| branch | gnome-shell version |
-| --- | --- |
-| master | 3.36.1 |
-| 3.34.2 | 3.34.2 |
-| 3.28.3 | 3.28.3 |
-
+Checkout `master` branch for latest available, or `gnome-shell-x.xx` for a specific version.
 
 Clone, Pack, and Install
 ```console
