@@ -18,20 +18,15 @@ First pick the right branch by the gnome-shell-X.XX version:
 
 | branch | gnome-shell version |
 | --- | --- |
-| master | 3.32.2 |
+| master | 3.36.1 |
+| 3.34.2 | 3.34.2 |
 | 3.28.3 | 3.28.3 |
 
 
 Clone, Pack, and Install
 ```console
 $ git clone https://github.com/rgolangh/gnome-shell-extension-containers
-$ gnome-extensions pack -f --extra-source=podman-icon.png
-$ gnome-extensions install -f containers@royg.shell-extension.zip
-```
-Enable
-```console
-$ gnome-extensions enable containers@royg
-```
+$ make all
 
 Or using 'Tweaks' -> Extensions -> toggle 'Containers'
 
