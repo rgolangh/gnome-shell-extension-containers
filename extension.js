@@ -1,6 +1,7 @@
 'use strict';
 
 const Main = imports.ui.main;
+const Config = imports.misc.config;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const St = imports.gi.St;
@@ -12,17 +13,22 @@ const PopupMenu = imports.ui.popupMenu;
 const GObject = imports.gi.GObject;
 
 let containersMenu;
-
 let debugEnabled = false;
 
-function debug(obj) {
+function debug(msg) {
     if (debugEnabled) {
-        log(`[DEBUG] object is ${obj}`);
+        log(`gnome-shell-extensions-containers - [DEBUG] ${msg}`);
+    }
+}
+
+function info(msg) {
+    if (debugEnabled) {
+        log(`gnome-shell-extensions-containers - [INFO] ${msg}`);
     }
 }
 
 function enable() {
-    log("enabling containers extension");
+    info("enabling containers extension");
     containersMenu = new ContainersMenu();
     debug(containersMenu);
     containersMenu.renderMenu();
@@ -30,7 +36,7 @@ function enable() {
 }
 
 function disable() {
-    log("disabling containers extension");
+    info("disabling containers extension");
     containersMenu.destroy();
 }
 
@@ -38,7 +44,10 @@ function createIcon(name, styleClass) {
     return new St.Icon({ icon_name: name, style_class: styleClass, icon_size: '14' });
 }
 
-const ContainersMenu = GObject.registerClass(
+var ContainersMenu = GObject.registerClass(
+    {
+        GTypeName: 'ContainersMenu'
+    },
 class ContainersMenu extends PanelMenu.Button {
     _init() {
         super._init(0.0, "Containers");
@@ -61,7 +70,7 @@ class ContainersMenu extends PanelMenu.Button {
     renderMenu() {
         try {
             const containers = getContainers();
-            log(`found ${containers.length} containers`);
+            info(`found ${containers.length} containers`);
             if (containers.length > 0) {
                 containers.forEach((container) => {
                     debug(container);
@@ -74,11 +83,12 @@ class ContainersMenu extends PanelMenu.Button {
         } catch (err) {
             const errMsg = _("Error occurred when fetching containers");
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
-            log(`${errMsg}: ${err}`);
+            info(`${errMsg}: ${err}`);
         }
         this.show();
     }
 });
+
 
 /* getContainers return a json array containers in the form of 
 [
@@ -99,11 +109,11 @@ class ContainersMenu extends PanelMenu.Button {
 const getContainers = () => {
     const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
     if (!res) {
-        log(`status: ${status}, error: ${err}`);
+        info(`status: ${status}, error: ${err}`);
         throw new Error(_("Error occurred when fetching containers"));
     }
     debug(out);
-    const containers = JSON.parse(out);
+    const containers = JSON.parse(imports.byteArray.toString(out));
     if (containers == null) {
         return {};
     }
@@ -112,15 +122,15 @@ const getContainers = () => {
 
 const runCommand = function (command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
-    log(`running command ${cmdline}`);
+    info(`running command ${cmdline}`);
     const [res, out, err, status] = GLib.spawn_command_line_sync(cmdline);
     if (status === 0) {
-        log(`command on ${containerName} terminated successfully`);
+        info(`command on ${containerName} terminated successfully`);
     } else {
         const errMsg = _(`Error occurred when running ${command} on container ${containerName}`);
         Main.notify(errMsg);
-        log(errMsg);
-        log(err);
+        info(errMsg);
+        info(err);
     }
     debug(out);
     return out;
@@ -128,48 +138,60 @@ const runCommand = function (command, containerName) {
 
 const runCommandInTerminal = function (command, containerName, args) {
     const cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
-    log(`running command ${cmdline}`);
+    info(`running command ${cmdline}`);
     const [res, out, err, status] = GLib.spawn_command_line_async(cmdline);
     if (status === 0) {
-        log(`command on ${containerName} terminated successfully`);
+        info(`command on ${containerName} terminated successfully`);
     } else {
         const errMsg = _(`Error occurred when running ${command} on container ${containerName}`);
         Main.notify(errMsg);
-        log(errMsg);
-        log(err);
+        info(errMsg);
+        info(err);
     }
     debug(out);
     return out;
 }
 
-const PopupMenuItem = class extends PopupMenu.PopupMenuItem {
-    constructor(label, value) {
+var PopupMenuItem = GObject.registerClass(
+    {
+        GTypeName: 'PopupMenuItem'
+    },
+class extends PopupMenu.PopupMenuItem {
+    _init(label, value) {
         if (value === undefined) {
-            super(label);
+            super._init(label);
         } else {
-            super(`${label}: ${value}`);
+            super._init(`${label}: ${value}`);
             this.connect('button_press_event', Lang.bind(this, () => {
                 setClipboard(value);
             }, false));
         }
         this.add_style_class_name("containers-extension-subMenuItem");
     }
-}
+});
 
-const ContainerMenuItem = class extends PopupMenuItem {
-    constructor(containerName, command) {
-        super(command);
+var ContainerMenuItem = GObject.registerClass(
+   {
+        GTypeName: 'ContainerMenuItem'
+   },
+class extends PopupMenuItem {
+    _init(containerName, command) {
+        super._init(command);
         this.containerName = containerName;
         this.command = command;
         this.connect('activate', Lang.bind(this, () => {
             runCommand(this.command, this.containerName);
 	    }));
     }
-};
+});
 
-const ContainerMenuWithOutputItem = class extends PopupMenuItem {
-    constructor(containerName, command, outputHdndler) {
-        super(command);
+var ContainerMenuWithOutputItem = GObject.registerClass(
+   {
+        GTypeName: 'ContainerMenuWithOutputItem'
+   },
+class extends PopupMenuItem {
+    _init(containerName, command, outputHdndler) {
+        super._init(command);
         this.containerName = containerName;
         this.command = command;
         this.connect('activate', Lang.bind(this, () => {
@@ -177,11 +199,15 @@ const ContainerMenuWithOutputItem = class extends PopupMenuItem {
             outputHdndler(out);
 	    }));
     }
-};
+});
 
-const ContainerMenuItemWithTerminalAction = class extends PopupMenuItem {
-    constructor(label, containerName, command, args) {
-        super(label);
+var ContainerMenuItemWithTerminalAction = GObject.registerClass(
+   {
+        GTypeName: 'ContainerMenuItemWithTerminalAction'
+   },
+class extends PopupMenuItem {
+    _init(label, containerName, command, args) {
+        super._init(label);
         this.containerName = containerName;
         this.command = command;
         this.args = args;
@@ -189,18 +215,23 @@ const ContainerMenuItemWithTerminalAction = class extends PopupMenuItem {
             runCommandInTerminal(this.command, this.containerName, this.args);
 	    }));
     }
-};
+});
 
 
-var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
-    constructor(container, name) {
-        super(container.Names);
+var ContainerSubMenuMenuItem = GObject.registerClass(
+    {
+        GTypeName: 'ContainerSubMenuMenuItem'
+    },
+class extends PopupMenu.PopupSubMenuMenuItem {
+    _init(container, name) {
+        super._init(container.Names);
         this.menu.addMenuItem(new PopupMenuItem("Status", container.Status));
         this.menu.addMenuItem(new PopupMenuItem("Id", container.ID));
         this.menu.addMenuItem(new PopupMenuItem("Image", container.Image));
         this.menu.addMenuItem(new PopupMenuItem("Command", container.Command));
         this.menu.addMenuItem(new PopupMenuItem("Created", container.Created));
         this.menu.addMenuItem(new PopupMenuItem("Ports", container.Ports));
+
         // add more stats and info - inspect - SLOW
         this.connect("button_press_event", Lang.bind(this, () => {
             inspect(container.Names, this.menu);
@@ -211,6 +242,7 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
             case "Exited":
             case "Created":
             case "stopped":
+
                 this.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
                 const startMeunItem = new ContainerMenuItem(container.Names, "start");
                 startMeunItem.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-start'), 1);
@@ -249,7 +281,7 @@ var ContainerSubMenuMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
         const logMenuItem = createLogMenuItem(container);
         this.menu.addMenuItem(logMenuItem);
     }
-};
+});
 
 function setClipboard(text) {
     St.Clipboard.get_default().set_text(St.ClipboardType.PRIMARY, text);
@@ -257,7 +289,7 @@ function setClipboard(text) {
 
 function inspect(container, menu) {
     let out = runCommand("inspect --format json", container);
-    let inspect = JSON.parse(out);
+    let inspect = JSON.parse(imports.byteArray.toString(out));
     if (inspect.length > 0 && inspect[0].NetworkSettings != null) {
         menu.addMenuItem(
             new PopupMenuItem("IP Address", JSON.stringify(inspect[0].NetworkSettings.IPAddress)));
@@ -265,31 +297,37 @@ function inspect(container, menu) {
 }
 
 function createLogMenuItem(container) {
-    let i = new ContainerMenuWithOutputItem(container.ID, "logs", gnomeOpenHander);
+    //let i = new ContainerMenuWithOutputItem(container.ID, "logs", gnomeOpenHander);
+    let i = new ContainerMenuItemWithTerminalAction("logs", "", `less -f <(podman logs ${container.Names})`, "");
     i.insert_child_at_index(createIcon('document-open-symbolic.symbolic', 'action-logs'), 1)
     return i
 }
 
 function gnomeOpenHander(out) {
     // let gnome-open handle the output of out
-    const [tmp, stream] = Gio.file_new_tmp(null);
+    const f = Gio.File.new_tmp(null);
+    if (f == null) {
+	debug("failed opening a temp file");
+	return;
+    }
     try {
-        let r = GLib.file_set_contents(tmp.get_path(), out);;
-        debug(`result of writing output to file: ${r}`);
-        let cmdline = "gnome-open " + tmp.get_path();
+        const cmdline = "gnome-open " + f[0].get_path();
+	f[0].replace_contents(out, null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null);
         const [res, stdout, err, status] = GLib.spawn_command_line_async(cmdline);
         if (status === 0) {
             debug("gnome-open command ran successfully");
         } else {
             const errMsg = _(`Error occurred when running ${cmdline}`);
             Main.notify(errMsg);
-            log(errMsg);
-            log(err);
+            info(errMsg);
+            info(err);
         }
     } catch (e) {
-      log(e);
+      info(e);
     } finally {
         // close file?
+	info("about to delete file " + f[0].get_path());
+	f.delete();
     }
 }
 
