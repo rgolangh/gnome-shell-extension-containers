@@ -14,21 +14,23 @@ See the [gnome extensions page](https://extensions.gnome.org/extension/1500/cont
 
 # Install from source
 
-First pick the right branch by the gnome-shell-X.XX version: 
+First pick the right branch by the `gnome-shell-X.XX` version: 
 
 | branch | gnome-shell version |
 | --- | --- |
 | master | 3.36.1 |
+| 3.36   | 3.36.4 |
 | 3.34.2 | 3.34.2 |
 | 3.28.3 | 3.28.3 |
 
-
 Clone, Pack, and Install
+
 ```console
 $ git clone https://github.com/rgolangh/gnome-shell-extension-containers
 $ make all
+```
 
-Or using 'Tweaks' -> Extensions -> toggle 'Containers'
+Or using 'Tweaks' -> Extensions -> toggle 'Containers':
 
 <p>
   <img src="screenshot.png" width="350" title="gnome-shell-extension-containers">
