@@ -235,7 +235,7 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
             this.menu.addMenuItem(new PopupMenuItem("Id", container.Id));
             this.menu.addMenuItem(new PopupMenuItem("Image", container.Image));
             this.menu.addMenuItem(new PopupMenuItem("Command", container.Command));
-            this.menu.addMenuItem(new PopupMenuItem("Created", container.Created));
+            this.menu.addMenuItem(new PopupMenuItem("Created", timeConverter(container.Created)));
             this.menu.addMenuItem(new PopupMenuItem("Ports", container.Ports));
 
             // add more stats and info - inspect - SLOW
@@ -330,4 +330,10 @@ function createStatsMenuItem(container) {
     const i = new ContainerMenuItemWithTerminalAction("stats", container.Names[0], "podman stats", "");
     i.insert_child_at_index(new St.Label({ style_class: 'action-stats', text: "%" }), 1);
     return i;
+}
+
+function timeConverter(UNIX_timestamp) {
+    var dateObject = new Date(UNIX_timestamp * 1000);
+    
+    return dateObject.toLocaleString()
 }
