@@ -14,6 +14,7 @@ const GObject = imports.gi.GObject;
 
 let containersMenu;
 let debugEnabled = false;
+let podmanVersion;
 
 function debug(msg) {
     if (debugEnabled) {
@@ -29,6 +30,7 @@ function info(msg) {
 
 function enable() {
     info("enabling containers extension");
+    init();
     containersMenu = new ContainersMenu();
     debug(containersMenu);
     containersMenu.renderMenu();
@@ -73,8 +75,8 @@ class ContainersMenu extends PanelMenu.Button {
             info(`found ${containers.length} containers`);
             if (containers.length > 0) {
                 containers.forEach((container) => {
-                    debug(container);
-                    const subMenu = new ContainerSubMenuMenuItem(container, container.Names);
+                    debug(container.toString());
+                    const subMenu = new ContainerSubMenuMenuItem(container, container.name);
                     this.menu.addMenuItem(subMenu);
                 });
             } else {
@@ -88,37 +90,6 @@ class ContainersMenu extends PanelMenu.Button {
         this.show();
     }
 });
-
-
-/* getContainers return a json array containers in the form of 
-[
-    {
-        "ID": "7a9e1233db51",
-        "Image": "localhost/image-name:latest",
-        "Command": "/entrypoint.sh bash",
-        "CreatedAtTime": "2018-10-10T10:14:47.884563227+03:00",
-        "Created": "2 weeks ago",
-        "Status": "Created",
-        "Ports": "",
-        "Size": "",
-        "Names": "sleepy_shockley",
-        "Labels": "key=value,"
-    },
-]
-*/
-const getContainers = () => {
-    const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
-    if (!res) {
-        info(`status: ${status}, error: ${err}`);
-        throw new Error(_("Error occurred when fetching containers"));
-    }
-    debug(out);
-    const containers = JSON.parse(imports.byteArray.toString(out));
-    if (containers == null) {
-        return {};
-    }
-    return containers;
-};
 
 const runCommand = function (command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
@@ -167,6 +138,7 @@ class extends PopupMenu.PopupMenuItem {
             }, false));
         }
         this.add_style_class_name("containers-extension-subMenuItem");
+        this.add_style_class_name(label.toLowerCase());
     }
 });
 
@@ -224,42 +196,47 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
     },
 class extends PopupMenu.PopupSubMenuMenuItem {
     _init(container, name) {
-        super._init(container.Names);
-        this.menu.addMenuItem(new PopupMenuItem("Status", container.Status));
-        this.menu.addMenuItem(new PopupMenuItem("Id", container.ID));
-        this.menu.addMenuItem(new PopupMenuItem("Image", container.Image));
-        this.menu.addMenuItem(new PopupMenuItem("Command", container.Command));
-        this.menu.addMenuItem(new PopupMenuItem("Created", container.Created));
-        this.menu.addMenuItem(new PopupMenuItem("Ports", container.Ports));
+        super._init(container.name);
+        this.menu.addMenuItem(new PopupMenuItem("Status", container.status));
+        this.menu.addMenuItem(new PopupMenuItem("Id", container.id));
+        this.menu.addMenuItem(new PopupMenuItem("Image", container.image));
+        this.menu.addMenuItem(new PopupMenuItem("Command", container.command));
+        this.menu.addMenuItem(new PopupMenuItem("Created", container.createdAt));
+        this.menu.addMenuItem(new PopupMenuItem("Ports", container.ports));
 
         // add more stats and info - inspect - SLOW
         this.connect("button_press_event", Lang.bind(this, () => {
-            inspect(container.Names, this.menu);
+            inspect(container.name, this.menu);
 	}));
         // end of inspect
 
-        switch (container.Status.split(" ")[0]) {
+        switch (container.status.split(" ")[0]) {
             case "Exited":
+            case "exited":
             case "Created":
+            case "created":
+            case "configured":
             case "stopped":
 
                 this.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
-                const startMeunItem = new ContainerMenuItem(container.Names, "start");
+                const startMeunItem = new ContainerMenuItem(container.name, "start");
                 startMeunItem.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-start'), 1);
                 this.menu.addMenuItem(startMeunItem);
-                const rmMenuItem = new ContainerMenuItem(container.Names, "rm");
+                const rmMenuItem = new ContainerMenuItem(container.name, "rm");
                 rmMenuItem.insert_child_at_index(createIcon('user-trash-symbolic', 'status-remove'), 1);
                 this.menu.addMenuItem(rmMenuItem);
                 break;
             case "Up":
+            case "running":
+                this.menu.addMenuItem(new PopupMenuItem("Started", container.startedAt));
                 this.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-running'), 1);
-                const pauseMenuIten = new ContainerMenuItem(container.Names, "pause");
+                const pauseMenuIten = new ContainerMenuItem(container.name, "pause");
                 pauseMenuIten.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-stopped'), 1);
                 this.menu.addMenuItem(pauseMenuIten);
-                const stopMenuItem = new ContainerMenuItem(container.Names, "stop");
+                const stopMenuItem = new ContainerMenuItem(container.name, "stop");
                 stopMenuItem.insert_child_at_index(createIcon('process-stop-symbolic', 'status-stopped'), 1);
                 this.menu.addMenuItem(stopMenuItem);
-                const restartMenuItem = new ContainerMenuItem(container.Names, "restart");
+                const restartMenuItem = new ContainerMenuItem(container.name, "restart");
                 restartMenuItem.insert_child_at_index(createIcon('system-reboot-symbolic', 'status-restart'), 1);
                 this.menu.addMenuItem(restartMenuItem);
                 this.menu.addMenuItem(createTopMenuItem(container));
@@ -267,8 +244,9 @@ class extends PopupMenu.PopupSubMenuMenuItem {
                 this.menu.addMenuItem(createStatsMenuItem(container));
                 break;
             case "Paused":
+            case "paused":
                 this.insert_child_at_index(createIcon('media-playback-pause-symbolic', 'status-paused'), 1);
-                const unpauseMenuItem = new ContainerMenuItem(container.Names, "unpause");
+                const unpauseMenuItem = new ContainerMenuItem(container.name, "unpause");
                 unpauseMenuItem.insert_child_at_index(createIcon('media-playback-start-symbolic', 'status-start'), 1)
                 this.menu.addMenuItem(unpauseMenuItem);
                 break;
@@ -297,26 +275,133 @@ function inspect(container, menu) {
 }
 
 function createLogMenuItem(container) {
-    let i = new ContainerMenuItemWithTerminalAction("logs", "", `podman logs -f ${container.Names}`, "");
+    let i = new ContainerMenuItemWithTerminalAction("logs", "", `podman logs -f ${container.name}`, "");
     i.insert_child_at_index(createIcon('document-open-symbolic.symbolic', 'action-logs'), 1)
     return i
 }
 
 function createTopMenuItem(container) {
-    const i = new ContainerMenuItemWithTerminalAction("top", container.Names, "watch podman top", "");
+    const i = new ContainerMenuItemWithTerminalAction("top", container.name, "watch podman top", "");
     i.insert_child_at_index(createIcon('view-reveal-symbolic.symbolic', 'action-top'), 1);
     return i;
 }
 
 function createShellMenuItem(container) {
-    const i = new ContainerMenuItemWithTerminalAction("sh", container.Names, "podman exec -it", "/bin/sh");
+    const i = new ContainerMenuItemWithTerminalAction("sh", container.name, "podman exec -it", "/bin/sh");
     i.insert_child_at_index(new St.Label({ style_class: 'action-sh', text: ">_" }), 1);
     return i;
 }
 
 function createStatsMenuItem(container) {
-    const i = new ContainerMenuItemWithTerminalAction("stats", container.Names, "podman stats", "");
+    const i = new ContainerMenuItemWithTerminalAction("stats", container.name, "podman stats", "");
     i.insert_child_at_index(new St.Label({ style_class: 'action-stats', text: "%" }), 1);
     return i;
+}
+
+
+function init() {
+    const [res, out, err, status] = GLib.spawn_command_line_sync("podman version --format json");
+    if (!res) {
+        info(`status: ${status}, error: ${err}`);
+        throw new Error(_("Error getting podman version"));
+    }
+    debug(out);
+    const versionJson = JSON.parse(imports.byteArray.toString(out));
+    if (versionJson.Client != null && versionJson.Client.Version != null) {
+        podmanVersion = new Version(versionJson.Client.Version);
+    }
+    if (versionJson == null) {
+        info("unable to set podman info, will fall back to syntax and output < 2.0.3");
+    }
+    debug(podmanVersion);
+}
+
+// return list of containers : Container[]
+function getContainers(containersLister) {
+    const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
+    // const [res, out, err, status] = containersLister.get();
+
+    if (!res) {
+        info(`status: ${status}, error: ${err}`);
+        throw new Error(_("Error occurred when fetching containers"));
+    }
+    debug(out);
+    const jsonContainers = JSON.parse(imports.byteArray.toString(out));
+    if (jsonContainers == null) {
+        return [];
+    }
+    const containers = [];
+    jsonContainers.forEach(e => {
+        let c = new Container(e);
+        containers.push(c);
+    });
+    return containers;
+}
+
+class Container {
+    constructor(jsonContainer) {
+        if (podmanVersion.newerOrEqualTo("2.0.3")) {
+            this.name = jsonContainer.Names[0];
+            this.id = jsonContainer.Id;
+            this.state = jsonContainer.State;
+            this.status = jsonContainer.State;
+            this.createdAt = jsonContainer.CreatedAt;
+        } else {
+            this.name = jsonContainer.Names;
+            this.id = jsonContainer.ID;
+            this.state = jsonContainer.Status;
+            this.status = jsonContainer.Status;
+            this.createdAt = jsonContainer.Created;
+            
+        }
+        this.image = jsonContainer.Image;
+        this.command = jsonContainer.Command;
+        this.startedAt = new Date(jsonContainer.StartedAt * 1000);
+        this.ports = jsonContainer.Ports.map(e => `host ${e.hostPort}/${e.protocol} -> pod ${e.containerPort}`);
+    }
+
+    toString() {
+        return `name:   ${this.name}
+                id:     ${this.id}
+                state:  ${this.state}
+                status: ${this.status}
+                image:  ${this.image}`;
+    }
+}
+
+class Version {
+    constructor(v) {
+        const splits = v.split(".")
+        this.major = splits[0];
+        this.minor = splits[1];
+        if (splits.length > 2) {
+            this.patch = splits[2];
+        }
+    }
+
+    newerOrEqualTo(v) {
+        return this.compare(new Version(v)) >= 0;
+    }
+
+    compare(other) {
+        debug(`compare ${this} with ${other}`);
+        if (this.major != other.major) {
+            return Math.sign(this.major - other.major);
+        }
+        if (this.minor != other.minor) {
+            return Math.sign(this.minor - other.minor);
+        }
+        if (this.patch != other.patch) {
+            if (this.patch == null) {
+                return -1;
+            }
+            return this.patch.localeCompare(other.patch);
+        }
+        return 0;
+    }
+
+    toString() {
+        return `major: ${this.major} minor: ${this.minor} patch: ${this.patch}`;
+    }
 }
 
