@@ -203,10 +203,14 @@ class extends PopupMenu.PopupSubMenuMenuItem {
         this.menu.addMenuItem(new PopupMenuItem("Command", container.command));
         this.menu.addMenuItem(new PopupMenuItem("Created", container.createdAt));
         this.menu.addMenuItem(new PopupMenuItem("Ports", container.ports));
+        this.inspected = false;
 
         // add more stats and info - inspect - SLOW
         this.connect("button_press_event", Lang.bind(this, () => {
-            inspect(container.name, this.menu);
+            if (!this.inspected) {
+                inspect(container.name, this.menu);
+                this.inspected = true;
+            }
 	}));
         // end of inspect
 
