@@ -357,7 +357,11 @@ class Container {
         this.image = jsonContainer.Image;
         this.command = jsonContainer.Command;
         this.startedAt = new Date(jsonContainer.StartedAt * 1000);
-        this.ports = jsonContainer.Ports.map(e => `host ${e.hostPort}/${e.protocol} -> pod ${e.containerPort}`);
+        if (jsonContainer.Ports == null) {
+            this.ports = "n/a";
+        } else {
+            this.ports = jsonContainer.Ports.map(e => `host ${e.hostPort}/${e.protocol} -> pod ${e.containerPort}`);
+        }
     }
 
     toString() {
