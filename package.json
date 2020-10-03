@@ -1,0 +1,8 @@
+{
+  "name": "gnome-shell-extension-containers",
+  "version": "0.1.0",
+  "description": "this package.json is solely to run eslint",
+  "scripts": {
+    "lint": "eslint *.js"
+  }
+}
