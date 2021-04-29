@@ -5,6 +5,7 @@
   "uuid": "containers@royg",
   "shell-version": [
     "3.34",
-    "3.36"
+    "3.36",
+    "40"
   ]
 }
