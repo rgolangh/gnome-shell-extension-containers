@@ -10,10 +10,13 @@ install:
 enable:
 	gnome-extensions enable containers@royg
 
+debug:
+	dbus-run-session -- gnome-shell --nested --wayland
+
 all: \
 	build \
 	install \
 	enable
 
-.PHONY: build install enable all
+.PHONY: build debug enable install all
 
