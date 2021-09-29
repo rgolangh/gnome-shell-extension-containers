@@ -30,7 +30,7 @@ function info(msg) {
 
 function enable() {
     info("enabling containers extension");
-    init();
+    discoverPodmanVersion();
     containersMenu = new ContainersMenu();
     debug(containersMenu);
     containersMenu.renderMenu();
@@ -302,7 +302,7 @@ function createStatsMenuItem(container) {
 }
 
 
-function init() {
+function discoverPodmanVersion() {
     const [res, out, err, status] = GLib.spawn_command_line_sync("podman version --format json");
     if (!res) {
         info(`status: ${status}, error: ${err}`);
