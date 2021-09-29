@@ -7,7 +7,6 @@ const Me = ExtensionUtils.getCurrentExtension();
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
-const Lang = imports.lang;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const GObject = imports.gi.GObject;
@@ -60,12 +59,12 @@ class ContainersMenu extends PanelMenu.Button {
 
         hbox.add_child(icon);
         this.add_child(hbox);
-        this.connect('button_press_event', Lang.bind(this, () => {
+        this.connect('button_press_event', () => {
             if (this.menu.isOpen) {
                 this.menu.removeAll();
                 this.renderMenu();
             }
-        }));
+        });
     }
 
     renderMenu() {
@@ -109,17 +108,14 @@ const runCommand = function (command, containerName) {
 const runCommandInTerminal = function (command, containerName, args) {
     const cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
     info(`running command ${cmdline}`);
-    const [res, out, err, status] = GLib.spawn_command_line_async(cmdline);
-    if (status === 0) {
+    const ok = GLib.spawn_command_line_async(cmdline);
+    if (ok) {
         info(`command on ${containerName} terminated successfully`);
     } else {
         const errMsg = _(`Error occurred when running ${command} on container ${containerName}`);
         Main.notify(errMsg);
         info(errMsg);
-        info(err);
     }
-    debug(out);
-    return out;
 }
 
 var PopupMenuItem = GObject.registerClass(
@@ -132,9 +128,7 @@ class extends PopupMenu.PopupMenuItem {
             super._init(label);
         } else {
             super._init(`${label}: ${value}`);
-            this.connect('button_press_event', Lang.bind(this, () => {
-                setClipboard(value);
-            }, false));
+            this.connect('button_press_event', setClipboard.bind(this, value));
         }
         this.add_style_class_name("containers-extension-subMenuItem");
         this.add_style_class_name(label.toLowerCase());
@@ -150,27 +144,10 @@ class extends PopupMenuItem {
         super._init(command);
         this.containerName = containerName;
         this.command = command;
-        this.connect('activate', Lang.bind(this, () => {
-            runCommand(this.command, this.containerName);
-	    }));
+        this.connect('activate', runCommand.bind(this, this.command, this.containerName));
     }
 });
 
-var ContainerMenuWithOutputItem = GObject.registerClass(
-   {
-        GTypeName: 'ContainerMenuWithOutputItem'
-   },
-class extends PopupMenuItem {
-    _init(containerName, command, outputHdndler) {
-        super._init(command);
-        this.containerName = containerName;
-        this.command = command;
-        this.connect('activate', Lang.bind(this, () => {
-            var out = runCommand(this.command, this.containerName);
-            outputHdndler(out);
-	    }));
-    }
-});
 
 var ContainerMenuItemWithTerminalAction = GObject.registerClass(
    {
@@ -182,9 +159,7 @@ class extends PopupMenuItem {
         this.containerName = containerName;
         this.command = command;
         this.args = args;
-        this.connect('activate', Lang.bind(this, () => {
-            runCommandInTerminal(this.command, this.containerName, this.args);
-	    }));
+        this.connect('activate', runCommandInTerminal.bind(this, this.command, this.containerName, this.args));
     }
 });
 
@@ -205,12 +180,12 @@ class extends PopupMenu.PopupSubMenuMenuItem {
         this.inspected = false;
 
         // add more stats and info - inspect - SLOW
-        this.connect("button_press_event", Lang.bind(this, () => {
+        this.connect("button_press_event", () => {
             if (!this.inspected) {
                 inspect(container.name, this.menu);
                 this.inspected = true;
             }
-	}));
+	});
         // end of inspect
 
         switch (container.status.split(" ")[0]) {
