@@ -59,7 +59,6 @@ class ContainersMenu extends PanelMenu.Button {
         const icon = new St.Icon({ gicon: gicon, icon_size: '24' });
 
         hbox.add_child(icon);
-        hbox.add_child(PopupMenu.arrowIcon(St.Side.BOTTOM));
         this.add_child(hbox);
         this.connect('button_press_event', Lang.bind(this, () => {
             if (this.menu.isOpen) {
