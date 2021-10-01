@@ -1,8 +1,7 @@
 ---
 # SPDX-License-Identifier: MIT OR LGPL-2.0-or-later
-# SPDX-FileCopyrightText: 2018 Claudio André <claudioandre.br@gmail.com>
 #
-# This file was copied from gnome shell extension repo and is a conbination of the linting rules under the direcory
+# The initial file content was copied from gnome shell extension repo and is a conbination of the linting rules under the direcory
 # https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/tree/main/lint
 env:
   es6: true
@@ -25,11 +24,10 @@ rules:
   block-scoped-var: error
   block-spacing: error
   brace-style: error
-  # Waiting for this to have matured a bit in eslint
-  # camelcase:
-  #   - error
-  #   - properties: never
-  #     allow: [^vfunc_, ^on_, _instance_init]
+  camelcase:
+    - error
+    - properties: never
+      allow: [^vfunc_, ^on_]
   comma-dangle:
     - error
     - arrays: always-multiline
@@ -45,8 +43,6 @@ rules:
   computed-property-spacing: error
   curly:
     - error
-    - multi-or-nest
-    - consistent
   dot-location:
     - error
     - property
@@ -210,7 +206,7 @@ rules:
   prefer-template: error
   quotes:
     - error
-    - single
+    - double
     - avoidEscape: true
   require-await: error
   rest-spread-spacing: error
