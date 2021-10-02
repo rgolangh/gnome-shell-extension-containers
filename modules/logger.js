@@ -1,7 +1,8 @@
+// exported debug info
 "use strict";
 
 
-let debugEnabled = true;
+let debugEnabled = false;
 
 
 /**
@@ -9,6 +10,7 @@ let debugEnabled = true;
  *
  * @param {string} msg is the logged message
  */
+// eslint-disable-next-line no-unused-vars
 function debug(msg) {
     if (debugEnabled) {
         log(`gnome-shell-extensions-containers - [DEBUG] ${msg}`);
@@ -20,6 +22,7 @@ function debug(msg) {
  *
  * @param {string} msg the logged message
  */
+// eslint-disable-next-line no-unused-vars
 function info(msg) {
     if (debugEnabled) {
         log(`gnome-shell-extensions-containers - [INFO] ${msg}`);
