@@ -1,8 +1,6 @@
 "use strict";
 
 const Main = imports.ui.main;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
@@ -10,41 +8,23 @@ const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const GObject = imports.gi.GObject;
 
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+const Podman = Me.imports.modules.podman;
+const Logger = Me.imports.modules.logger;
+
 let containersMenu;
-let debugEnabled = false;
-let podmanVersion;
 
-/**
- * debug is convenience method for debug log messages
- *
- * @param {string} msg is the logged message
- */
-function debug(msg) {
-    if (debugEnabled) {
-        log(`gnome-shell-extensions-containers - [DEBUG] ${msg}`);
-    }
-}
-
-/**
- * info is convenience method for info log messages
- *
- * @param {string} msg the logged message
- */
-function info(msg) {
-    if (debugEnabled) {
-        log(`gnome-shell-extensions-containers - [INFO] ${msg}`);
-    }
-}
 
 /**
  * enable is the entry point called by gnome-shell
  */
 // eslint-disable-next-line no-unused-vars
 function enable() {
-    info("enabling containers extension");
-    discoverPodmanVersion();
+    Logger.info("enabling containers extension");
+    Podman.discoverPodmanVersion();
     containersMenu = new ContainersMenu();
-    debug(containersMenu);
+    Logger.debug(containersMenu);
     containersMenu.renderMenu();
     Main.panel.addToStatusArea("containers-menu", containersMenu);
 }
@@ -52,7 +32,7 @@ function enable() {
 /** disable is called when the main extension menu is closed **/
 // eslint-disable-next-line no-unused-vars
 function disable() {
-    info("disabling containers extension");
+    Logger.info("disabling containers extension");
     containersMenu.destroy();
 }
 
@@ -89,11 +69,11 @@ var ContainersMenu = GObject.registerClass(
 
         renderMenu() {
             try {
-                const containers = getContainers();
-                info(`found ${containers.length} containers`);
+                const containers = Podman.getContainers();
+                Logger.info(`found ${containers.length} containers`);
                 if (containers.length > 0) {
                     containers.forEach(container => {
-                        debug(container.toString());
+                        Logger.debug(container.toString());
                         const subMenu = new ContainerSubMenuMenuItem(container, container.name);
                         this.menu.addMenuItem(subMenu);
                     });
@@ -103,7 +83,7 @@ var ContainersMenu = GObject.registerClass(
             } catch (err) {
                 const errMsg = "Error occurred when fetching containers";
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
-                info(`${errMsg}: ${err}`);
+                Logger.info(`${errMsg}: ${err}`);
             }
             this.show();
         }
@@ -116,18 +96,18 @@ var ContainersMenu = GObject.registerClass(
  */
 function runCommand(command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
-    info(`running command ${cmdline}`);
+    Logger.info(`running command ${cmdline}`);
     // eslint-disable-next-line no-unused-vars
     const [_res, out, err, status] = GLib.spawn_command_line_sync(cmdline);
     if (status === 0) {
-        info(`command on ${containerName} terminated successfully`);
+        Logger.info(`command on ${containerName} terminated successfully`);
     } else {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
         Main.notify(errMsg);
-        info(errMsg);
-        info(err);
+        Logger.info(errMsg);
+        Logger.info(err);
     }
-    debug(out);
+    Logger.debug(out);
     return out;
 }
 
@@ -141,14 +121,14 @@ function runCommand(command, containerName) {
  */
 function runCommandInTerminal(command, containerName, args) {
     const cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
-    info(`running command ${cmdline}`);
+    Logger.info(`running command ${cmdline}`);
     const ok = GLib.spawn_command_line_async(cmdline);
     if (ok) {
-        info(`command on ${containerName} terminated successfully`);
+        Logger.info(`command on ${containerName} terminated successfully`);
     } else {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
         Main.notify(errMsg);
-        info(errMsg);
+        Logger.info(errMsg);
     }
 }
 
@@ -174,11 +154,10 @@ var ContainerMenuItem = GObject.registerClass(
         GTypeName: "ContainerMenuItem",
     },
     class extends PopupMenuItem {
-        _init(containerName, command) {
-            super._init(command);
+        _init(containerName, commandLabel, commandFunc) {
+            super._init(commandLabel);
             this.containerName = containerName;
-            this.command = command;
-            this.connect("activate", runCommand.bind(this, this.command, this.containerName));
+            this.connect("activate", () => commandFunc());
         }
     });
 
@@ -227,10 +206,10 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
             case "configured":
             case "stopped": {
                 this.insert_child_at_index(createIcon("process-stop-symbolic", "status-stopped"), 1);
-                const startMeunItem = new ContainerMenuItem(container.name, "start");
+                const startMeunItem = new ContainerMenuItem(container.name, "start", () => container.start());
                 startMeunItem.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-start"), 1);
                 this.menu.addMenuItem(startMeunItem);
-                const rmMenuItem = new ContainerMenuItem(container.name, "rm");
+                const rmMenuItem = new ContainerMenuItem(container.name, "rm", () => container.rm());
                 rmMenuItem.insert_child_at_index(createIcon("user-trash-symbolic", "status-remove"), 1);
                 this.menu.addMenuItem(rmMenuItem);
                 break;
@@ -239,13 +218,13 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
             case "running": {
                 this.menu.addMenuItem(new PopupMenuItem("Started", container.startedAt));
                 this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
-                const pauseMenuIten = new ContainerMenuItem(container.name, "pause");
+                const pauseMenuIten = new ContainerMenuItem(container.name, "pause", () => container.pause());
                 pauseMenuIten.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-stopped"), 1);
                 this.menu.addMenuItem(pauseMenuIten);
-                const stopMenuItem = new ContainerMenuItem(container.name, "stop");
+                const stopMenuItem = new ContainerMenuItem(container.name, "stop", () => container.stop());
                 stopMenuItem.insert_child_at_index(createIcon("process-stop-symbolic", "status-stopped"), 1);
                 this.menu.addMenuItem(stopMenuItem);
-                const restartMenuItem = new ContainerMenuItem(container.name, "restart");
+                const restartMenuItem = new ContainerMenuItem(container.name, "restart", () => container.restart());
                 restartMenuItem.insert_child_at_index(createIcon("system-reboot-symbolic", "status-restart"), 1);
                 this.menu.addMenuItem(restartMenuItem);
                 this.menu.addMenuItem(createTopMenuItem(container));
@@ -256,7 +235,7 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
             case "Paused":
             case "paused": {
                 this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
-                const unpauseMenuItem = new ContainerMenuItem(container.name, "unpause");
+                const unpauseMenuItem = new ContainerMenuItem(container.name, "unpause", () => container.unpause());
                 unpauseMenuItem.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-start"), 1);
                 this.menu.addMenuItem(unpauseMenuItem);
                 break;
@@ -332,115 +311,5 @@ function createStatsMenuItem(container) {
     const i = new ContainerMenuItemWithTerminalAction("stats", container.name, "podman stats", "");
     i.insert_child_at_index(new St.Label({style_class: "action-stats", text: "%"}), 1);
     return i;
-}
-
-/** discovers a podman version and stores in a global */
-function discoverPodmanVersion() {
-    const [res, out, err, status] = GLib.spawn_command_line_sync("podman version --format json");
-    if (!res) {
-        info(`status: ${status}, error: ${err}`);
-        throw new Error("Error getting podman version");
-    }
-    debug(out);
-    const versionJson = JSON.parse(imports.byteArray.toString(out));
-    if (versionJson.Client !== null && versionJson.Client.Version !== null) {
-        podmanVersion = new Version(versionJson.Client.Version);
-    }
-    if (versionJson === null) {
-        info("unable to set podman info, will fall back to syntax and output < 2.0.3");
-    }
-    debug(podmanVersion);
-}
-
-/** return list of containers : Container[] */
-function getContainers() {
-    const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
-
-    if (!res) {
-        info(`status: ${status}, error: ${err}`);
-        throw new Error("Error occurred when fetching containers");
-    }
-    debug(out);
-    const jsonContainers = JSON.parse(imports.byteArray.toString(out));
-    if (jsonContainers === null) {
-        return [];
-    }
-    const containers = [];
-    jsonContainers.forEach(e => {
-        let c = new Container(e);
-        containers.push(c);
-    });
-    return containers;
-}
-
-class Container {
-    constructor(jsonContainer) {
-        if (podmanVersion.newerOrEqualTo("2.0.3")) {
-            this.name = jsonContainer.Names[0];
-            this.id = jsonContainer.Id;
-            this.state = jsonContainer.State;
-            this.status = jsonContainer.State;
-            this.createdAt = jsonContainer.CreatedAt;
-        } else {
-            this.name = jsonContainer.Names;
-            this.id = jsonContainer.ID;
-            this.state = jsonContainer.Status;
-            this.status = jsonContainer.Status;
-            this.createdAt = jsonContainer.Created;
-        }
-
-        this.image = jsonContainer.Image;
-        this.command = jsonContainer.Command;
-        this.startedAt = new Date(jsonContainer.StartedAt * 1000);
-        if (jsonContainer.Ports === null) {
-            this.ports = "n/a";
-        } else {
-            this.ports = jsonContainer.Ports.map(e => `host ${e.hostPort}/${e.protocol} -> pod ${e.containerPort}`);
-        }
-    }
-
-    toString() {
-        return `name:   ${this.name}
-                id:     ${this.id}
-                state:  ${this.state}
-                status: ${this.status}
-                image:  ${this.image}`;
-    }
-}
-
-class Version {
-    constructor(v) {
-        const splits = v.split(".");
-        this.major = splits[0];
-        this.minor = splits[1];
-        if (splits.length > 2) {
-            this.patch = splits[2];
-        }
-    }
-
-    newerOrEqualTo(v) {
-        return this.compare(new Version(v)) >= 0;
-    }
-
-    compare(other) {
-        debug(`compare ${this} with ${other}`);
-        if (this.major !== other.major) {
-            return Math.sign(this.major - other.major);
-        }
-        if (this.minor !== other.minor) {
-            return Math.sign(this.minor - other.minor);
-        }
-        if (this.patch !== other.patch) {
-            if (this.patch === null) {
-                return -1;
-            }
-            return this.patch.localeCompare(other.patch);
-        }
-        return 0;
-    }
-
-    toString() {
-        return `major: ${this.major} minor: ${this.minor} patch: ${this.patch}`;
-    }
 }
 
