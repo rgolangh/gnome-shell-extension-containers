@@ -178,18 +178,14 @@ class Version {
 function runCommand(command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
     Logger.info(`running command ${cmdline}`);
-    // eslint-disable-next-line no-unused-vars
-    const [_res, out, err, status] = GLib.spawn_command_line_sync(cmdline);
-    if (status === 0) {
+    const ok = GLib.spawn_command_line_async(cmdline);
+    if (ok) {
         Logger.info(`command on ${containerName} terminated successfully`);
     } else {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
         Main.notify(errMsg);
         Logger.info(errMsg);
-        Logger.info(err);
     }
-    Logger.debug(out);
-    return out;
 }
 
 /** runCommandInTerminal runs a podman container command using the cli
