@@ -3,7 +3,6 @@
 const Main = imports.ui.main;
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
 const GObject = imports.gi.GObject;
@@ -40,7 +39,7 @@ function disable() {
  *
  * @param {string} name is icon name
  * @param {string} styleClass is style_class
- * */
+ */
 function createIcon(name, styleClass) {
     return new St.Icon({icon_name: name, style_class: styleClass, icon_size: "14"});
 }
@@ -89,48 +88,6 @@ var ContainersMenu = GObject.registerClass(
         }
     });
 
-/** runCommand runs a podman container command using the cli
- *
- * @param {string} command the command verb
- * @param {string} containerName is the contaier name
- */
-function runCommand(command, containerName) {
-    const cmdline = `podman ${command} ${containerName}`;
-    Logger.info(`running command ${cmdline}`);
-    // eslint-disable-next-line no-unused-vars
-    const [_res, out, err, status] = GLib.spawn_command_line_sync(cmdline);
-    if (status === 0) {
-        Logger.info(`command on ${containerName} terminated successfully`);
-    } else {
-        const errMsg = `Error occurred when running ${command} on container ${containerName}`;
-        Main.notify(errMsg);
-        Logger.info(errMsg);
-        Logger.info(err);
-    }
-    Logger.debug(out);
-    return out;
-}
-
-/** runCommandInTerminal runs a podman container command using the cli
- *  and in gnome-terminal(unconfigurable atm) visible to users to present output.
- *  Useful for logs, top, and stats container-commands.
- *
- * @param {string} command {string} the command verb
- * @param {string} containerName {string} is the contaier name
- * @param {...string} args to pass to the invocation
- */
-function runCommandInTerminal(command, containerName, args) {
-    const cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
-    Logger.info(`running command ${cmdline}`);
-    const ok = GLib.spawn_command_line_async(cmdline);
-    if (ok) {
-        Logger.info(`command on ${containerName} terminated successfully`);
-    } else {
-        const errMsg = `Error occurred when running ${command} on container ${containerName}`;
-        Main.notify(errMsg);
-        Logger.info(errMsg);
-    }
-}
 
 var PopupMenuItem = GObject.registerClass(
     {
@@ -161,20 +118,6 @@ var ContainerMenuItem = GObject.registerClass(
         }
     });
 
-var ContainerMenuItemWithTerminalAction = GObject.registerClass(
-    {
-        GTypeName: "ContainerMenuItemWithTerminalAction",
-    },
-    class extends PopupMenuItem {
-        _init(label, containerName, command, args) {
-            super._init(label);
-            this.containerName = containerName;
-            this.command = command;
-            this.args = args;
-            this.connect("activate", runCommandInTerminal.bind(this, this.command, this.containerName, this.args));
-        }
-    });
-
 var ContainerSubMenuMenuItem = GObject.registerClass(
     {
         GTypeName: "ContainerSubMenuMenuItem",
@@ -188,13 +131,16 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
             this.menu.addMenuItem(new PopupMenuItem("Command", container.command));
             this.menu.addMenuItem(new PopupMenuItem("Created", container.createdAt));
             this.menu.addMenuItem(new PopupMenuItem("Ports", container.ports));
+            const ipAddrMenuItem = new PopupMenuItem("IP Address", "");
+            this.menu.addMenuItem(ipAddrMenuItem);
             this.inspected = false;
 
             // add more stats and info - inspect - SLOW
             this.connect("button_press_event", () => {
                 if (!this.inspected) {
-                    inspect(container.name, this.menu);
+                    container.inspect();
                     this.inspected = true;
+                    ipAddrMenuItem.label.set_text(`${ipAddrMenuItem.label.text} ${container.ipAddress}`);
                 }
             });
 
@@ -258,27 +204,12 @@ function setClipboard(text) {
     St.Clipboard.get_default().set_text(St.ClipboardType.PRIMARY, text);
 }
 
-/** a container inspect command which return much more data than
- * the regular list response and is slower
- *
- * @param {string} containerName is the target container name
- * @param {menuItem} menu to which to add details to
- */
-function inspect(containerName, menu) {
-    let out = runCommand("inspect --format json", containerName);
-    let container = JSON.parse(imports.byteArray.toString(out));
-    if (container.length > 0 && container[0].NetworkSettings !== null) {
-        menu.addMenuItem(
-            new PopupMenuItem("IP Address", JSON.stringify(container[0].NetworkSettings.IPAddress)));
-    }
-}
-
 /** creates a log menu items
  *
  * @param {Container} container is the target container
  */
 function createLogMenuItem(container) {
-    let i = new ContainerMenuItemWithTerminalAction("logs", "", `podman logs -f ${container.name}`, "");
+    let i = new ContainerMenuItem(container.name, "logs", () => container.logs());
     i.insert_child_at_index(createIcon("document-open-symbolic.symbolic", "action-logs"), 1);
     return i;
 }
@@ -288,7 +219,7 @@ function createLogMenuItem(container) {
  * @param {Container} container is the target container
  */
 function createTopMenuItem(container) {
-    const i = new ContainerMenuItemWithTerminalAction("top", container.name, "watch podman top", "");
+    const i = new ContainerMenuItem(container.name, "top", () => container.watchTop());
     i.insert_child_at_index(createIcon("view-reveal-symbolic.symbolic", "action-top"), 1);
     return i;
 }
@@ -298,7 +229,7 @@ function createTopMenuItem(container) {
  * @param {Container} container is the target container
  */
 function createShellMenuItem(container) {
-    const i = new ContainerMenuItemWithTerminalAction("sh", container.name, "podman exec -it", "/bin/sh");
+    const i = new ContainerMenuItem(container.name, "sh", () => container.shell());
     i.insert_child_at_index(new St.Label({style_class: "action-sh", text: ">_"}), 1);
     return i;
 }
@@ -308,7 +239,7 @@ function createShellMenuItem(container) {
  * @param {Container} container is the target container
  */
 function createStatsMenuItem(container) {
-    const i = new ContainerMenuItemWithTerminalAction("stats", container.name, "podman stats", "");
+    const i = new ContainerMenuItem(container.name, "stats", () => container.stats());
     i.insert_child_at_index(new St.Label({style_class: "action-stats", text: "%"}), 1);
     return i;
 }
