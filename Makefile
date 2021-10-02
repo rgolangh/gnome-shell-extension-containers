@@ -1,5 +1,7 @@
 EXTRA_SOURCES = \
-	--extra-source=podman-icon.png
+	--extra-source=podman-icon.png \
+	--extra-source=modules
+
 
 build:
 	gnome-extensions pack -f $(EXTRA_SOURCES)
