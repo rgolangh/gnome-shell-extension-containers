@@ -1,10 +1,7 @@
 .containers-extension-menu {
-	width: 350px;
+	width: 600px; 
 }
 
-.containers-extension-subMenuItem {
-	padding-left: 20px;
-}
 
 .status-running {
 	color: lawngreen;
@@ -26,6 +23,26 @@
 	color: SkyBlue;
 }
 
+.container-action-box .action {
+	padding: 0;
+	spacing: 0;
+	margin: 0;
+	border-radius: 20px;
+}
+
+.container-action-box .action .icon{
+	padding: 0;
+	spacing: 0;
+	width: 10px;
+	display: inline-grid;
+	margin-left: 5px;
+	margin-right: 5px;
+}
+
+.action-enabled {
+      
+}
+
 .action-sh {
 	color: greenyellow;
 }
@@ -36,4 +53,9 @@
 
 .action-stats {
 	color: greenyellow;
+}
+
+.container-action-box {
+	padding: 0px 0px;
+	margin-right: 10px;
 }

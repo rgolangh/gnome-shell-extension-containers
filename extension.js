@@ -41,7 +41,7 @@ function disable() {
  * @param {string} styleClass is style_class
  */
 function createIcon(name, styleClass) {
-    return new St.Icon({icon_name: name, style_class: styleClass, icon_size: "14"});
+    return new St.Icon({icon_name: name, style_class: `icon ${styleClass}`, icon_size: "14"});
 }
 
 var ContainersMenu = GObject.registerClass(
@@ -115,6 +115,8 @@ var ContainerMenuItem = GObject.registerClass(
             super._init(commandLabel);
             this.containerName = containerName;
             this.connect("activate", () => commandFunc());
+            this.add_style_class_name("action");
+	    this.disabled = true;
         }
     });
 
@@ -125,6 +127,37 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
     class extends PopupMenu.PopupSubMenuMenuItem {
         _init(container) {
             super._init(container.name);
+            // insert action box
+	    const abox = new St.BoxLayout({style_class: "container-action-box"});
+	    this.insert_child_at_index(abox, 3)
+            const startMeunItem = new ContainerMenuItem(container.name, "", () => container.start());
+            startMeunItem.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-start"), 1);
+	    abox.add_child(startMeunItem);
+            const stopMenuItem = new ContainerMenuItem(container.name, "", () => container.stop());
+            stopMenuItem.insert_child_at_index(createIcon("process-stop-symbolic", "status-stopped"), 1);
+	    abox.add_child(stopMenuItem);
+            const rmMenuItem = new ContainerMenuItem(container.name, "", () => container.rm());
+            rmMenuItem.insert_child_at_index(createIcon("user-trash-symbolic", "status-remove"), 1);
+	    abox.add_child(rmMenuItem);
+
+            const pauseMenuIten = new ContainerMenuItem(container.name, "", () => container.pause());
+            pauseMenuIten.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-stopped"), 1);
+	    abox.add_child(pauseMenuIten);
+            const unpauseMenuItem = new ContainerMenuItem(container.name, "", () => container.unpause());
+            unpauseMenuItem.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-start"), 1);
+            abox.add_child(unpauseMenuItem);
+
+            const restartMenuItem = new ContainerMenuItem(container.name, "", () => container.restart());
+            restartMenuItem.insert_child_at_index(createIcon("system-reboot-symbolic", "status-restart"), 1);
+	    abox.add_child(restartMenuItem);
+
+            const topMenuItem = createTopMenuItem(container);
+            const shellMenuItem = createShellMenuItem(container);
+            const statsMenuItem = createStatsMenuItem(container);
+            abox.add_child(topMenuItem);
+            abox.add_child(shellMenuItem);
+            abox.add_child(statsMenuItem);
+
             this.menu.addMenuItem(new PopupMenuItem("Status", container.status));
             this.menu.addMenuItem(new PopupMenuItem("Id", container.id));
             this.menu.addMenuItem(new PopupMenuItem("Image", container.image));
@@ -152,38 +185,28 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
             case "configured":
             case "stopped": {
                 this.insert_child_at_index(createIcon("process-stop-symbolic", "status-stopped"), 1);
-                const startMeunItem = new ContainerMenuItem(container.name, "start", () => container.start());
-                startMeunItem.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-start"), 1);
-                this.menu.addMenuItem(startMeunItem);
-                const rmMenuItem = new ContainerMenuItem(container.name, "rm", () => container.rm());
-                rmMenuItem.insert_child_at_index(createIcon("user-trash-symbolic", "status-remove"), 1);
-                this.menu.addMenuItem(rmMenuItem);
+                startMeunItem.add_style_class_name("action-enabled");
+                startMeunItem.disabled = false;
+                rmMenuItem.add_style_class_name("action-enabled");
                 break;
             }
             case "Up":
             case "running": {
                 this.menu.addMenuItem(new PopupMenuItem("Started", container.startedAt));
                 this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
-                const pauseMenuIten = new ContainerMenuItem(container.name, "pause", () => container.pause());
-                pauseMenuIten.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-stopped"), 1);
-                this.menu.addMenuItem(pauseMenuIten);
-                const stopMenuItem = new ContainerMenuItem(container.name, "stop", () => container.stop());
-                stopMenuItem.insert_child_at_index(createIcon("process-stop-symbolic", "status-stopped"), 1);
-                this.menu.addMenuItem(stopMenuItem);
-                const restartMenuItem = new ContainerMenuItem(container.name, "restart", () => container.restart());
-                restartMenuItem.insert_child_at_index(createIcon("system-reboot-symbolic", "status-restart"), 1);
-                this.menu.addMenuItem(restartMenuItem);
-                this.menu.addMenuItem(createTopMenuItem(container));
-                this.menu.addMenuItem(createShellMenuItem(container));
-                this.menu.addMenuItem(createStatsMenuItem(container));
+                pauseMenuIten.add_style_class_name("action-enabled");
+                stopMenuItem.add_style_class_name("action-enabled");
+	        stopMenuItem.disabled = false;
+                restartMenuItem.add_style_class_name("action-enabled");
+		topMenuItem.add_style_class_name("action-enabled");
+		shellMenuItem.add_style_class_name("action-enabled");
+		statsMenuItem.add_style_class_name("action-enabled");
                 break;
             }
             case "Paused":
             case "paused": {
                 this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
-                const unpauseMenuItem = new ContainerMenuItem(container.name, "unpause", () => container.unpause());
-                unpauseMenuItem.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-start"), 1);
-                this.menu.addMenuItem(unpauseMenuItem);
+		unpauseMenuItem.add_style_class_name("action-enabled");
                 break;
             }
             default:
@@ -193,6 +216,7 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
 
             // add log button
             const logMenuItem = createLogMenuItem(container);
+		logMenuItem.disabled = true;
             this.menu.addMenuItem(logMenuItem);
         }
     });

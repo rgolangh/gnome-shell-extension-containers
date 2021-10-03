@@ -2,6 +2,7 @@
 
 const GLib = imports.gi.GLib;
 const Main = imports.ui.main;
+const ByteArray = imports.byteArray;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -19,7 +20,7 @@ function getContainers() {
         throw new Error("Error occurred when fetching containers");
     }
     Logger.debug(out);
-    const jsonContainers = JSON.parse(imports.byteArray.toString(out));
+    const jsonContainers = JSON.parse(ByteArray.toString(out));
     if (jsonContainers === null) {
         return [];
     }
@@ -99,7 +100,7 @@ class Container {
 
     inspect() {
         let out = runCommand("inspect --format json", this.name);
-        let json = JSON.parse(imports.byteArray.toString(out));
+        let json = JSON.parse(ByteArray.toString(out));
         if (json.length > 0 && json[0].NetworkSettings !== null) {
             const ipAddress = JSON.stringify(json[0].NetworkSettings.IPAddress);
             this.ipAddress = ipAddress  ? "n/a" : ipAddress;
@@ -124,7 +125,7 @@ function discoverPodmanVersion() {
         throw new Error("Error getting podman version");
     }
     Logger.debug(out);
-    const versionJson = JSON.parse(imports.byteArray.toString(out));
+    const versionJson = JSON.parse(ByteArray.toString(out));
     if (versionJson.Client !== null && versionJson.Client.Version !== null) {
         podmanVersion = new Version(versionJson.Client.Version);
     }
