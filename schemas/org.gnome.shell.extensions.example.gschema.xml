@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.containers" path="/org/gnome/shell/extensions/containers/">
+    <!-- See also: https://developer.gnome.org/glib/stable/gvariant-format-strings.html -->
+    <key name="enable-debug-logs" type="b">
+      <default>false</default>
+    </key>
+  </schema>
+</schemalist>
+

@@ -4,6 +4,7 @@ EXTRA_SOURCES = \
 
 
 build:
+	glib-compile-schemas schemas/
 	gnome-extensions pack -f $(EXTRA_SOURCES)
 
 install:
