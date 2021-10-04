@@ -116,7 +116,7 @@ var ContainerMenuItem = GObject.registerClass(
             this.containerName = containerName;
             this.connect("activate", () => commandFunc());
             this.add_style_class_name("action");
-	    this.disabled = true;
+	    this.reactive = false;
         }
     });
 
@@ -186,7 +186,7 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
             case "stopped": {
                 this.insert_child_at_index(createIcon("process-stop-symbolic", "status-stopped"), 1);
                 startMeunItem.add_style_class_name("action-enabled");
-                startMeunItem.disabled = false;
+                startMeunItem.reactive = false;
                 rmMenuItem.add_style_class_name("action-enabled");
                 break;
             }
@@ -196,7 +196,7 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
                 this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
                 pauseMenuIten.add_style_class_name("action-enabled");
                 stopMenuItem.add_style_class_name("action-enabled");
-	        stopMenuItem.disabled = false;
+	        stopMenuItem.reactive = false;
                 restartMenuItem.add_style_class_name("action-enabled");
 		topMenuItem.add_style_class_name("action-enabled");
 		shellMenuItem.add_style_class_name("action-enabled");
@@ -216,7 +216,7 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
 
             // add log button
             const logMenuItem = createLogMenuItem(container);
-		logMenuItem.disabled = true;
+		logMenuItem.reactive = true;
             this.menu.addMenuItem(logMenuItem);
         }
     });
