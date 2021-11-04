@@ -62,9 +62,9 @@ var ContainersMenu = GObject.registerClass(
             this._renderMenu();
         }
 
-        _renderMenu() {
+        async _renderMenu() {
             try {
-                const containers = Podman.getContainers();
+                const containers = await Podman.getContainers();
                 Logger.info(`found ${containers.length} containers`);
 
                 this.menu.removeAll();
@@ -125,9 +125,9 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
             this.inspected = false;
 
             // add more stats and info - inspect - SLOW
-            this.connect("button_press_event", () => {
+            this.connect("button-press-event", async () => {
                 if (!this.inspected) {
-                    container.inspect();
+                    await container.inspect();
                     this.inspected = true;
                     ipAddrMenuItem.label.set_text(`${ipAddrMenuItem.label.text} ${container.ipAddress}`);
                 }
