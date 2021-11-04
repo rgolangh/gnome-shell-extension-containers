@@ -1,5 +1,6 @@
 "use strict";
 
+const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Main = imports.ui.main;
 
@@ -7,26 +8,32 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Logger = Me.imports.modules.logger;
 
+Gio._promisify(Gio.Subprocess.prototype,
+    "communicate_utf8_async", "communicate_utf8_finish");
+
 let podmanVersion;
 
 /** @returns list of containers : Container[] */
 // eslint-disable-next-line no-unused-vars
-function getContainers() {
+async function getContainers() {
     if (podmanVersion === undefined) {
-        discoverPodmanVersion();
+        await discoverPodmanVersion();
     }
 
-    const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
+    let jsonContainers;
 
-    if (!res) {
-        Logger.info(`status: ${status}, error: ${err}`);
+    try {
+        const out = await spawnCommandline("podman ps -a --format json");
+        jsonContainers = JSON.parse(out);
+    } catch (e) {
+        Logger.info(e.message);
         throw new Error("Error occurred when fetching containers");
     }
-    Logger.debug(out);
-    const jsonContainers = JSON.parse(imports.byteArray.toString(out));
+
     if (jsonContainers === null) {
         return [];
     }
+
     const containers = [];
     jsonContainers.forEach(e => {
         let c = new Container(e);
@@ -101,9 +108,9 @@ class Container {
         runCommandInTerminal("podman stats", this.name, "");
     }
 
-    inspect() {
-        let out = runCommand("inspect --format json", this.name);
-        let json = JSON.parse(imports.byteArray.toString(out));
+    async inspect() {
+        const out = await runCommand("inspect --format json", this.name);
+        let json = JSON.parse(out);
         if (json.length > 0 && json[0].NetworkSettings !== null) {
             const ipAddress = JSON.stringify(json[0].NetworkSettings.IPAddress);
             this.ipAddress = ipAddress  ? "n/a" : ipAddress;
@@ -121,18 +128,21 @@ class Container {
 
 /** discoverPodmanVersion fetches the podman version from cli */
 // eslint-disable-next-line no-unused-vars
-function discoverPodmanVersion() {
-    const [res, out, err, status] = GLib.spawn_command_line_sync("podman version --format json");
-    if (!res) {
-        Logger.info(`status: ${status}, error: ${err}`);
+async function discoverPodmanVersion() {
+    let versionJson;
+
+    try {
+        const out = await spawnCommandline("podman version --format json");
+        versionJson = JSON.parse(out);
+    } catch (e) {
+        Logger.info(e.message);
         throw new Error("Error getting podman version");
     }
-    Logger.debug(out);
-    const versionJson = JSON.parse(imports.byteArray.toString(out));
-    if (versionJson.Client !== null && versionJson.Client.Version !== null) {
-        podmanVersion = new Version(versionJson.Client.Version);
-    }
-    if (versionJson === null) {
+
+    const versionString = versionJson?.Client?.Version;
+    if (versionString) {
+        podmanVersion = new Version(versionString);
+    } else {
         Logger.info("unable to set podman info, will fall back to syntax and output < 2.0.3");
     }
     Logger.debug(podmanVersion);
@@ -174,23 +184,42 @@ class Version {
     }
 }
 
+/** spawnCommandline runs a shell command and returns its output
+ *
+ * @param {string} cmdline - the command line to spawn
+ * @returns {string} - the command output
+ * @throws
+ */
+async function spawnCommandline(cmdline) {
+    const [, argv] = GLib.shell_parse_argv(cmdline);
+    const cmd = Gio.Subprocess.new(argv,
+        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
+
+    let [out, err] = await cmd.communicate_utf8_async(null, null);
+    const status = cmd.get_exit_status();
+    if (status !== 0) {
+        throw new Error(`Command terminated with status ${status}: ${err}`);
+    }
+    return out;
+}
+
 /** runCommand runs a podman container command using the cli
  *
  * @param {string} command the command verb
  * @param {string} containerName is the contaier name
  */
-function runCommand(command, containerName) {
+async function runCommand(command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
     Logger.info(`running command ${cmdline}`);
-    // eslint-disable-next-line no-unused-vars
-    const [_res, out, err, status] = GLib.spawn_command_line_sync(cmdline);
-    if (status === 0) {
+
+    let out;
+    try {
+        out = await spawnCommandline(cmdline);
         Logger.info(`command on ${containerName} terminated successfully`);
-    } else {
+    } catch (e) {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
-        Main.notify(errMsg);
-        Logger.info(errMsg);
-        Logger.info(err);
+        Main.notify(errMsg, e.message);
+        Logger.info(`${errMsg}: ${e.message}`);
     }
     Logger.debug(out);
     return out;
