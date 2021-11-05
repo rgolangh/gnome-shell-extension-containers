@@ -84,7 +84,6 @@ var ContainersMenu = GObject.registerClass(
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
                 Logger.info(`${errMsg}: ${err}`);
             }
-            this.show();
         }
     });
 
