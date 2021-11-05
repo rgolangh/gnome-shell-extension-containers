@@ -24,7 +24,6 @@ function enable() {
     Podman.discoverPodmanVersion();
     containersMenu = new ContainersMenu();
     Logger.debug(containersMenu);
-    containersMenu.renderMenu();
     Main.panel.addToStatusArea("containers-menu", containersMenu);
 }
 
@@ -58,15 +57,17 @@ var ContainersMenu = GObject.registerClass(
 
             hbox.add_child(icon);
             this.add_child(hbox);
-            this.connect("button_press_event", () => {
+
+            this.menu.connect("open-state-changed", () => {
                 if (this.menu.isOpen) {
                     this.menu.removeAll();
-                    this.renderMenu();
+                    this._renderMenu();
                 }
             });
+            this._renderMenu();
         }
 
-        renderMenu() {
+        _renderMenu() {
             try {
                 const containers = Podman.getContainers();
                 Logger.info(`found ${containers.length} containers`);
