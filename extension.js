@@ -60,7 +60,6 @@ var ContainersMenu = GObject.registerClass(
 
             this.menu.connect("open-state-changed", () => {
                 if (this.menu.isOpen) {
-                    this.menu.removeAll();
                     this._renderMenu();
                 }
             });
@@ -71,6 +70,8 @@ var ContainersMenu = GObject.registerClass(
             try {
                 const containers = Podman.getContainers();
                 Logger.info(`found ${containers.length} containers`);
+
+                this.menu.removeAll();
                 if (containers.length > 0) {
                     containers.forEach(container => {
                         Logger.debug(container.toString());
@@ -81,6 +82,7 @@ var ContainersMenu = GObject.registerClass(
                     this.menu.addMenuItem(new PopupMenu.PopupMenuItem("No containers detected"));
                 }
             } catch (err) {
+                this.menu.removeAll();
                 const errMsg = "Error occurred when fetching containers";
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
                 Logger.info(`${errMsg}: ${err}`);
