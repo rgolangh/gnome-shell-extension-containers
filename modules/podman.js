@@ -203,10 +203,10 @@ function runCommand(command, containerName) {
 function runCommandInTerminal(command, containerName, args) {
     const cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
     Logger.info(`running command ${cmdline}`);
-    const ok = GLib.spawn_command_line_async(cmdline);
-    if (ok) {
+    try {
+        GLib.spawn_command_line_async(cmdline);
         Logger.info(`command on ${containerName} terminated successfully`);
-    } else {
+    } catch (e) {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
         Main.notify(errMsg);
         Logger.info(errMsg);
