@@ -12,6 +12,10 @@ let podmanVersion;
 /** @returns list of containers : Container[] */
 // eslint-disable-next-line no-unused-vars
 function getContainers() {
+    if (podmanVersion === undefined) {
+        discoverPodmanVersion();
+    }
+
     const [res, out, err, status] = GLib.spawn_command_line_sync("podman ps -a --format json");
 
     if (!res) {
