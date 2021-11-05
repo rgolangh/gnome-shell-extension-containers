@@ -21,7 +21,6 @@ let containersMenu;
 // eslint-disable-next-line no-unused-vars
 function enable() {
     Logger.info("enabling containers extension");
-    Podman.discoverPodmanVersion();
     containersMenu = new ContainersMenu();
     Logger.debug(containersMenu);
     Main.panel.addToStatusArea("containers-menu", containersMenu);
