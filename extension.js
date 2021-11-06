@@ -45,9 +45,6 @@ function createIcon(name, styleClass) {
 }
 
 var ContainersMenu = GObject.registerClass(
-    {
-        GTypeName: "ContainersMenu",
-    },
     class ContainersMenu extends PanelMenu.Button {
         _init() {
             super._init(0.0, "Containers");
@@ -90,9 +87,6 @@ var ContainersMenu = GObject.registerClass(
 
 
 var PopupMenuItem = GObject.registerClass(
-    {
-        GTypeName: "PopupMenuItem",
-    },
     class extends PopupMenu.PopupMenuItem {
         _init(label, value) {
             if (value === undefined) {
@@ -107,9 +101,6 @@ var PopupMenuItem = GObject.registerClass(
     });
 
 var ContainerMenuItem = GObject.registerClass(
-    {
-        GTypeName: "ContainerMenuItem",
-    },
     class extends PopupMenuItem {
         _init(containerName, commandLabel, commandFunc) {
             super._init(commandLabel);
@@ -119,9 +110,6 @@ var ContainerMenuItem = GObject.registerClass(
     });
 
 var ContainerSubMenuMenuItem = GObject.registerClass(
-    {
-        GTypeName: "ContainerSubMenuMenuItem",
-    },
     class extends PopupMenu.PopupSubMenuMenuItem {
         _init(container) {
             super._init(container.name);
