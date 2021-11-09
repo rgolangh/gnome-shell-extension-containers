@@ -124,6 +124,25 @@ class Container {
                 status: ${this.status}
                 image:  ${this.image}`;
     }
+
+    details() {
+        const containerDetails = [
+            `Status: ${this.status}`,
+            `Image: ${this.image}`,
+            `Command: ${this.command}`,
+            `Created: ${this.createdAt}`,
+            `Started: ${this.startedAt !== null ? this.startedAt : "never"}`,
+            `Ports: ${this.ports}`,
+        ];
+
+        // add more stats and info - inspect - SLOW
+        if (!this.inspected) {
+            this.inspect();
+            this.inspected = true;
+            containerDetails.push(`IP Address: ${this.ipAddress}`);
+        }
+        return containerDetails.join("\n");
+    }
 }
 
 /** discoverPodmanVersion fetches the podman version from cli */
