@@ -1,16 +1,8 @@
 .containers-extension-menu {
-	width: 350px;
-}
-
-.containers-extension-subMenuItem {
-	padding-left: 20px;
+	width: 380px;
 }
 
 .status-running {
-	color: lawngreen;
-}
-
-.status-start {
 	color: lawngreen;
 }
 
@@ -26,14 +18,21 @@
 	color: SkyBlue;
 }
 
-.action-sh {
-	color: greenyellow;
+.button:checked {
+    color: #eeeeec;
+    background-color: #2d2d2d;
+    border-color: #191919;
+    text-shadow: none;
+    icon-shadow: none;
+    box-shadow: none;
 }
 
-.action-log {
-	color: gray;
+.containers-action-button {
+    padding-right: 6px;
+    padding-left: 6px;
 }
 
-.action-stats {
-	color: greenyellow;
+.container-action-bar {
+    margin-right: 40px;
+	margin-left: 12px;
 }
