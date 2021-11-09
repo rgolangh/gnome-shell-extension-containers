@@ -39,7 +39,7 @@ function disable() {
  * @param {string} styleClass is style_class
  */
 function createIcon(name, styleClass) {
-    return new St.Icon({icon_name: name, style_class: styleClass, icon_size: "14"});
+    return new St.Icon({icon_name: name, style_class: styleClass + " popup-menu-icon" });
 }
 
 var ContainersMenu = GObject.registerClass(
