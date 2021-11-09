@@ -2,7 +2,7 @@
 "use strict";
 
 
-let debugEnabled = false;
+let debugEnabled = true;
 
 
 /**
