@@ -1,10 +1,13 @@
 "use strict";
 
+const Clutter = imports.gi.Clutter;
 const Main = imports.ui.main;
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
+const Dialog = imports.ui.dialog;
+const ModalDialog = imports.ui.modalDialog;
 const GObject = imports.gi.GObject;
 
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -13,7 +16,6 @@ const Podman = Me.imports.modules.podman;
 const Logger = Me.imports.modules.logger;
 
 let containersMenu;
-
 
 /**
  * enable is the entry point called by gnome-shell
@@ -71,8 +73,7 @@ var ContainersMenu = GObject.registerClass(
                 if (containers.length > 0) {
                     containers.forEach(container => {
                         Logger.debug(container.toString());
-                        const subMenu = new ContainerSubMenuMenuItem(container, container.name);
-                        this.menu.addMenuItem(subMenu);
+                        this.menu.addMenuItem(new ContainerSubMenuItem(container, container.name));
                     });
                 } else {
                     this.menu.addMenuItem(new PopupMenu.PopupMenuItem("No containers detected"));
@@ -85,7 +86,6 @@ var ContainersMenu = GObject.registerClass(
             }
         }
     });
-
 
 var PopupMenuItem = GObject.registerClass(
     class extends PopupMenu.PopupMenuItem {
@@ -101,8 +101,9 @@ var PopupMenuItem = GObject.registerClass(
         }
     });
 
-var ContainerMenuItem = GObject.registerClass(
-    class extends PopupMenuItem {
+var ContainerMenuItem = GObject.registerClass({
+	GTypeName: 'ContainerMenuItem',
+},    class extends PopupMenuItem {
         _init(containerName, commandLabel, commandFunc) {
             super._init(commandLabel);
             this.containerName = containerName;
@@ -110,29 +111,45 @@ var ContainerMenuItem = GObject.registerClass(
         }
     });
 
-var ContainerSubMenuMenuItem = GObject.registerClass(
-    class extends PopupMenu.PopupSubMenuMenuItem {
+function addContainerAction(item, label, command) {
+    const i = new PopupMenu.PopupMenuItem(label);
+    i.connect("activate", () => command());
+    i.add_style_class_name("containers-extension-subMenuItem");
+    item.actor.add_child(i);
+}
+
+var ContainerSubMenuItem = GObject.registerClass({
+	GTypeName: 'ContainerSubMenuItem',
+},  class extends PopupMenu.PopupSubMenuMenuItem {
         _init(container) {
             super._init(container.name);
-            this.menu.addMenuItem(new PopupMenuItem("Status", container.status));
-            this.menu.addMenuItem(new PopupMenuItem("Id", container.id));
-            this.menu.addMenuItem(new PopupMenuItem("Image", container.image));
-            this.menu.addMenuItem(new PopupMenuItem("Command", container.command));
-            this.menu.addMenuItem(new PopupMenuItem("Created", container.createdAt));
-            this.menu.addMenuItem(new PopupMenuItem("Ports", container.ports));
-            const ipAddrMenuItem = new PopupMenuItem("IP Address", "");
-            this.menu.addMenuItem(ipAddrMenuItem);
-            this.inspected = false;
+            const actions = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, style_class: "container-action-bar"});
+            const details = new PopupMenu.PopupMenuSection();
+            this.menu.addMenuItem(actions);
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            this.menu.addMenuItem(details);
 
-            // add more stats and info - inspect - SLOW
-            this.connect("button-press-event", async () => {
-                if (!this.inspected) {
-                    await container.inspect();
-                    this.inspected = true;
-                    ipAddrMenuItem.label.set_text(`${ipAddrMenuItem.label.text} ${container.ipAddress}`);
-                }
-            });
-
+            const startBtn = addButton(actions, () => container.start(), "media-playback-start-symbolic");
+            const stopBtn = addButton(actions, () => container.stop(), "media-playback-stop-symbolic");
+            const restartBtn = addButton(actions, () => container.restart(), "system-reboot-symbolic");
+            const pauseBtn = addButton(
+                actions,
+                () => {
+                    if (container.status.split(" ")[0] === "running") {
+                        container.pause();
+                    }
+                    if (container.status.split(" ")[0] === "paused") {
+                        container.unpause();
+                    }
+                },
+                "media-playback-pause-symbolic"
+            );
+            pauseBtn.toggle_mode = true;
+            const deleteBtn = addButton(
+                actions,
+                () => {new RemoveContainerDialog(() => container.rm(), container.name).open(1, true)},
+                "user-trash-symbolic.symbolic");
+        
             switch (container.status.split(" ")[0]) {
             case "Exited":
             case "exited":
@@ -140,39 +157,23 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
             case "created":
             case "configured":
             case "stopped": {
-                this.insert_child_at_index(createIcon("process-stop-symbolic", "status-stopped"), 1);
-                const startMeunItem = new ContainerMenuItem(container.name, "start", () => container.start());
-                startMeunItem.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-start"), 1);
-                this.menu.addMenuItem(startMeunItem);
-                const rmMenuItem = new ContainerMenuItem(container.name, "rm", () => container.rm());
-                rmMenuItem.insert_child_at_index(createIcon("user-trash-symbolic", "status-remove"), 1);
-                this.menu.addMenuItem(rmMenuItem);
+                stopBtn.reactive = false;
+                pauseBtn.reactive = false;
+                this.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
                 break;
             }
             case "Up":
             case "running": {
-                this.menu.addMenuItem(new PopupMenuItem("Started", container.startedAt));
+                startBtn.reactive = false;
+                deleteBtn.reactive = false;
+                pauseBtn.checked = false;
                 this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
-                const pauseMenuIten = new ContainerMenuItem(container.name, "pause", () => container.pause());
-                pauseMenuIten.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-stopped"), 1);
-                this.menu.addMenuItem(pauseMenuIten);
-                const stopMenuItem = new ContainerMenuItem(container.name, "stop", () => container.stop());
-                stopMenuItem.insert_child_at_index(createIcon("process-stop-symbolic", "status-stopped"), 1);
-                this.menu.addMenuItem(stopMenuItem);
-                const restartMenuItem = new ContainerMenuItem(container.name, "restart", () => container.restart());
-                restartMenuItem.insert_child_at_index(createIcon("system-reboot-symbolic", "status-restart"), 1);
-                this.menu.addMenuItem(restartMenuItem);
-                this.menu.addMenuItem(createTopMenuItem(container));
-                this.menu.addMenuItem(createShellMenuItem(container));
-                this.menu.addMenuItem(createStatsMenuItem(container));
                 break;
             }
             case "Paused":
             case "paused": {
+                pauseBtn.checked = true;
                 this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
-                const unpauseMenuItem = new ContainerMenuItem(container.name, "unpause", () => container.unpause());
-                unpauseMenuItem.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-start"), 1);
-                this.menu.addMenuItem(unpauseMenuItem);
                 break;
             }
             default:
@@ -180,9 +181,31 @@ var ContainerSubMenuMenuItem = GObject.registerClass(
                 break;
             }
 
-            // add log button
-            const logMenuItem = createLogMenuItem(container);
-            this.menu.addMenuItem(logMenuItem);
+            addContainerAction(details, "Show logs", () => container.logs());
+            details.actor.add_child(new ContainerMenuItem(container.name, "Watch top", () => container.watchTop()));
+            details.actor.add_child(new ContainerMenuItem(container.name, "Open shell", () => container.shell()));
+            details.actor.add_child(new ContainerMenuItem(container.name, "Watch statistics", () => container.stats()));
+
+            details.actor.add_child(new PopupMenu.PopupSeparatorMenuItem());
+            details.actor.add_child(new PopupMenuItem("Status", container.status));
+            if (container.startedAt !== null) {
+                details.actor.add_child(new PopupMenuItem("Started", container.startedAt));
+            }
+            details.actor.add_child(new PopupMenuItem("Image", container.image));
+            details.actor.add_child(new PopupMenuItem("Command", container.command));
+            details.actor.add_child(new PopupMenuItem("Created", container.createdAt));
+            details.actor.add_child(new PopupMenuItem("Ports", container.ports));
+            const ipAddrMenuItem = new PopupMenuItem("IP Address", "");
+            details.actor.add_child(ipAddrMenuItem);
+
+            // add more stats and info - inspect - SLOW
+            this.connect("button-press-event", async () => {
+                if (!this.inspected) {
+                    container.inspect();
+                    this.inspected = true;
+                    ipAddrMenuItem.label.set_text(`${ipAddrMenuItem.label.text} ${container.ipAddress}`);
+                }
+            });
         }
     });
 
@@ -193,43 +216,51 @@ function setClipboard(text) {
     St.Clipboard.get_default().set_text(St.ClipboardType.PRIMARY, text);
 }
 
-/** creates a log menu items
+/** adds a button to item and returns it
  *
- * @param {Container} container is the target container
- */
-function createLogMenuItem(container) {
-    let i = new ContainerMenuItem(container.name, "logs", () => container.logs());
-    i.insert_child_at_index(createIcon("document-open-symbolic.symbolic", "action-logs"), 1);
-    return i;
+ * @param item that the created button is added to
+ * @param command is the actions to executoed when clicking the button
+ * @param isconName is the icon name
+ * */
+function addButton(item, command, iconName) {
+    const btn = new St.Button({
+        track_hover: true,
+        style_class: "containers-action-button button",
+        x_expand: true,
+        x_align: Clutter.ActorAlign.CENTER,
+    });
+    btn.child = new St.Icon({
+        icon_name: iconName,
+        style_class: "popup-menu-icon",
+    });
+    btn.connect("clicked", () => {
+        command();
+    });
+    item.actor.add_child(btn);
+    return btn;
 }
 
-/** creates a top menu item
- *
- * @param {Container} container is the target container
- */
-function createTopMenuItem(container) {
-    const i = new ContainerMenuItem(container.name, "top", () => container.watchTop());
-    i.insert_child_at_index(createIcon("view-reveal-symbolic.symbolic", "action-top"), 1);
-    return i;
-}
-
-/** creates a shell menu item
- *
- * @param {Container} container is the target container
- */
-function createShellMenuItem(container) {
-    const i = new ContainerMenuItem(container.name, "sh", () => container.shell());
-    i.insert_child_at_index(new St.Label({style_class: "action-sh", text: ">_"}), 1);
-    return i;
-}
-
-/** creates a stats menu item/
- *
- * @param {Container} container is the target container
- */
-function createStatsMenuItem(container) {
-    const i = new ContainerMenuItem(container.name, "stats", () => container.stats());
-    i.insert_child_at_index(new St.Label({style_class: "action-stats", text: "%"}), 1);
-    return i;
-}
+var RemoveContainerDialog = GObject.registerClass(
+class RemoveContainerDialog extends ModalDialog.ModalDialog {
+    _init(onConfirmed, containerName) {
+        super._init();
+        const content = new Dialog.MessageDialogContent();
+        content.title = "Remove Container";
+        content.description = `Are you sure you want to remove container ${containerName}?`;
+        this.contentLayout.add_child(content);
+        this._onConfirmed = onConfirmed
+        this.addButton({
+            action: () => this.close(false),
+            label: "Cancel",
+            key: Clutter.KEY_Escapse
+        });
+        this.addButton({
+            action: () =>  {
+                this.close(true);
+                this.connect("closed", () => this._onConfirmed());
+            },
+            label: "Remove",
+        });
+    }
+});
 

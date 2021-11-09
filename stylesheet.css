@@ -1,5 +1,5 @@
 .containers-extension-menu {
-	width: 350px;
+	width: 380px;
 }
 
 .containers-extension-subMenuItem {
@@ -7,10 +7,6 @@
 }
 
 .status-running {
-	color: lawngreen;
-}
-
-.status-start {
 	color: lawngreen;
 }
 
@@ -26,14 +22,18 @@
 	color: SkyBlue;
 }
 
-.action-sh {
-	color: greenyellow;
+.button:checked {
+  /* using this custom definition till Gnome provides a default
+   * https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/4757 */
+  color: LightSlateGray;
 }
 
-.action-log {
-	color: gray;
+.containers-action-button {
+    padding-right: 6px;
+    padding-left: 6px;
 }
 
-.action-stats {
-	color: greenyellow;
+.container-action-bar {
+    margin-right: 40px;
+	margin-left: 12px;
 }
