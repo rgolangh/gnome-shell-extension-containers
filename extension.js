@@ -94,7 +94,7 @@ var PopupMenuItem = GObject.registerClass(
                 super._init(label);
             } else {
                 super._init(`${label}: ${value}`);
-                this.connect("button_press_event", setClipboard.bind(this, value));
+                this.connect("button-press-event", setClipboard.bind(this, value));
             }
             this.add_style_class_name("containers-extension-subMenuItem");
             this.add_style_class_name(label.toLowerCase());
