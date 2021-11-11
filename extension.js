@@ -22,10 +22,14 @@ let containersMenu;
  */
 // eslint-disable-next-line no-unused-vars
 function enable() {
-    Logger.info("enabling containers extension");
-    containersMenu = new ContainersMenu();
-    Logger.debug(containersMenu);
-    Main.panel.addToStatusArea("containers-menu", containersMenu);
+    try {
+        Logger.info("enabling containers extension");
+        containersMenu = new ContainersMenu();
+        Logger.debug(containersMenu);
+        Main.panel.addToStatusArea("containers-menu", containersMenu);
+    } catch(err) {
+        logError(err);
+    }
 }
 
 /** disable is called when the main extension menu is closed **/
@@ -79,6 +83,7 @@ var ContainersMenu = GObject.registerClass(
                     this.menu.addMenuItem(new PopupMenu.PopupMenuItem("No containers detected"));
                 }
             } catch (err) {
+                logError(err);
                 this.menu.removeAll();
                 const errMsg = "Error occurred when fetching containers";
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
@@ -87,47 +92,27 @@ var ContainersMenu = GObject.registerClass(
         }
     });
 
-var PopupMenuItem = GObject.registerClass(
-    class extends PopupMenu.PopupMenuItem {
-        _init(label, value) {
+var ContainerProperty = class extends PopupMenu.PopupMenuItem {
+        constructor(label, value) {
             if (value === undefined) {
-                super._init(label);
+                super(label);
             } else {
-                super._init(`${label}: ${value}`);
-                this.connect("button-press-event", setClipboard.bind(this, value));
+                super(`${label}: ${value}`);
+                this.connect("button-press-event", () => setClipboard(value));
             }
-            this.add_style_class_name("containers-extension-subMenuItem");
-            this.add_style_class_name(label.toLowerCase());
+            this.actor.add_style_class_name("containers-extension-subMenuItem");
+            this.actor.add_style_class_name(label.toLowerCase());
         }
-    });
+    };
 
-var ContainerMenuItem = GObject.registerClass({
-	GTypeName: 'ContainerMenuItem',
-},    class extends PopupMenuItem {
-        _init(containerName, commandLabel, commandFunc) {
-            super._init(commandLabel);
-            this.containerName = containerName;
-            this.connect("activate", () => commandFunc());
-        }
-    });
 
-function addContainerAction(item, label, command) {
-    const i = new PopupMenu.PopupMenuItem(label);
-    i.connect("activate", () => command());
-    i.add_style_class_name("containers-extension-subMenuItem");
-    item.actor.add_child(i);
-}
-
-var ContainerSubMenuItem = GObject.registerClass({
-	GTypeName: 'ContainerSubMenuItem',
-},  class extends PopupMenu.PopupSubMenuMenuItem {
-        _init(container) {
-            super._init(container.name);
+var ContainerSubMenuItem = class extends PopupMenu.PopupSubMenuMenuItem {
+        constructor(container) {
+            super(container.name);
+            this.menu.box.add_style_class_name("aggregate-menu");
             const actions = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, style_class: "container-action-bar"});
-            const details = new PopupMenu.PopupMenuSection();
             this.menu.addMenuItem(actions);
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-            this.menu.addMenuItem(details);
 
             const startBtn = addButton(actions, () => container.start(), "media-playback-start-symbolic");
             const stopBtn = addButton(actions, () => container.stop(), "media-playback-stop-symbolic");
@@ -147,7 +132,7 @@ var ContainerSubMenuItem = GObject.registerClass({
             pauseBtn.toggle_mode = true;
             const deleteBtn = addButton(
                 actions,
-                () => {new RemoveContainerDialog(() => container.rm(), container.name).open(1, true)},
+                () => {new RemoveContainerDialog(container).open(1, true)},
                 "user-trash-symbolic.symbolic");
         
             switch (container.status.split(" ")[0]) {
@@ -159,7 +144,7 @@ var ContainerSubMenuItem = GObject.registerClass({
             case "stopped": {
                 stopBtn.reactive = false;
                 pauseBtn.reactive = false;
-                this.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
+                this.actor.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
                 break;
             }
             case "Up":
@@ -167,37 +152,36 @@ var ContainerSubMenuItem = GObject.registerClass({
                 startBtn.reactive = false;
                 deleteBtn.reactive = false;
                 pauseBtn.checked = false;
-                this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
+                this.actor.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
                 break;
             }
             case "Paused":
             case "paused": {
                 pauseBtn.checked = true;
-                this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
+                this.actor.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
                 break;
             }
             default:
-                this.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
+                this.actor.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
                 break;
             }
 
-            addContainerAction(details, "Show logs", () => container.logs());
-            details.actor.add_child(new ContainerMenuItem(container.name, "Watch top", () => container.watchTop()));
-            details.actor.add_child(new ContainerMenuItem(container.name, "Open shell", () => container.shell()));
-            details.actor.add_child(new ContainerMenuItem(container.name, "Watch statistics", () => container.stats()));
+            this.menu.addAction("Show logs", () => container.logs());
+            this.menu.addAction("Watch top", () => container.watchTop());
+            this.menu.addAction("Open shell", () => container.shell());
+            this.menu.addAction("Watch statistics", () => container.stats());
 
-            details.actor.add_child(new PopupMenu.PopupSeparatorMenuItem());
-            details.actor.add_child(new PopupMenuItem("Status", container.status));
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            this.menu.addMenuItem(new ContainerProperty("Status", container.status));
             if (container.startedAt !== null) {
-                details.actor.add_child(new PopupMenuItem("Started", container.startedAt));
+                this.menu.addMenuItem(new ContainerProperty("Started", container.startedAt));
             }
-            details.actor.add_child(new PopupMenuItem("Image", container.image));
-            details.actor.add_child(new PopupMenuItem("Command", container.command));
-            details.actor.add_child(new PopupMenuItem("Created", container.createdAt));
-            details.actor.add_child(new PopupMenuItem("Ports", container.ports));
-            const ipAddrMenuItem = new PopupMenuItem("IP Address", "");
-            details.actor.add_child(ipAddrMenuItem);
-
+            this.menu.addMenuItem(new ContainerProperty("Image", container.image));
+            this.menu.addMenuItem(new ContainerProperty("Command", container.command));
+            this.menu.addMenuItem(new ContainerProperty("Created", container.createdAt));
+            this.menu.addMenuItem(new ContainerProperty("Ports", container.ports));
+            const ipAddrMenuItem = new ContainerProperty("IP Address", "");
+            this.menu.addMenuItem(ipAddrMenuItem);
             // add more stats and info - inspect - SLOW
             this.connect("button-press-event", async () => {
                 if (!this.inspected) {
@@ -207,7 +191,7 @@ var ContainerSubMenuItem = GObject.registerClass({
                 }
             });
         }
-    });
+    };
 
 /** set clipboard with @param text
  *
@@ -240,27 +224,26 @@ function addButton(item, command, iconName) {
     return btn;
 }
 
-var RemoveContainerDialog = GObject.registerClass(
-class RemoveContainerDialog extends ModalDialog.ModalDialog {
-    _init(onConfirmed, containerName) {
-        super._init();
-        const content = new Dialog.MessageDialogContent();
-        content.title = "Remove Container";
-        content.description = `Are you sure you want to remove container ${containerName}?`;
+var RemoveContainerDialog = class RemoveContainerDialog extends ModalDialog.ModalDialog {
+    constructor(container) {
+        super();
+        const content = new Dialog.MessageDialogContent({
+	    title: "Remove Container",
+	    subtitle: `Are you sure you want to remove container ${container.name}?`,
+	});
         this.contentLayout.add_child(content);
-        this._onConfirmed = onConfirmed
         this.addButton({
-            action: () => this.close(false),
+            action: () => this.close(),
             label: "Cancel",
             key: Clutter.KEY_Escapse
         });
         this.addButton({
             action: () =>  {
-                this.close(true);
-                this.connect("closed", () => this._onConfirmed());
+                this.close();
+                container.rm();
             },
             label: "Remove",
         });
     }
-});
+};
 

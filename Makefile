@@ -1,16 +1,16 @@
 EXTRA_SOURCES = \
-	--extra-source=podman-icon.png \
-	--extra-source=modules
+	podman-icon.png \
+	modules/*
 
 
 build:
-	gnome-extensions pack -f $(EXTRA_SOURCES)
+	zip containers@royg.shell-extension.zip extension.js metadata.json stylesheet.css $(EXTRA_SOURCES)
 
 install:
-	gnome-extensions install -f containers@royg.shell-extension.zip
+	unzip -o -u containers@royg.shell-extension.zip -d ~/.local/share/gnome-shell/extensions/containers@royg
 
 enable:
-	gnome-extensions enable containers@royg
+	gnome-shell-extension-tool -e containers@royg
 
 debug:
 	dbus-run-session -- gnome-shell --nested --wayland
