@@ -1,35 +1,44 @@
 .containers-extension-menu {
-	width: 380px;
+    width: 350px;
 }
 
 .status-running {
-	color: lawngreen;
+    color: lawngreen;
 }
 
 .status-stopped {
-	color: red;
+    color: red;
 }
 
 .status-remove {
-	color: LightSlateGray;
+    color: LightSlateGray;
 }
 
 .status-undefined {
-	color: SkyBlue;
+    color: SkyBlue;
 }
 
 .button:checked {
-  /* using this custom definition till Gnome provides a default
-   * https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/4757 */
-  color: LightSlateGray;
+    color: #eeeeec;
+    background-color: #2d2d2d;
+    border-color: #191919;
+    text-shadow: none;
+    icon-shadow: none;
+    box-shadow: none;
 }
 
-.containers-action-button {
-    padding-right: 6px;
-    padding-left: 6px;
+.container-action-bar .button{
+    padding: 3px 24px;
 }
 
+.container-action-bar .button .popup-menu-item {
+    margin: auto;
+    text-align: center;
+}
+
+/*
 .container-action-bar {
     margin-right: 40px;
-	margin-left: 12px;
+    margin-left: 12px;
 }
+*/

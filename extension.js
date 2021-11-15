@@ -87,17 +87,16 @@ var ContainersMenu = GObject.registerClass(
         }
     });
 
-var ContainerSubMenuItem = GObject.registerClass(
-class extends PopupMenu.PopupSubMenuMenuItem {
-    _init(container) {
-        super._init(container.name);
+class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
+    constructor(container) {
+        super(container.name);
         const actions = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, style_class: "container-action-bar"});
         this.menu.addMenuItem(actions);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         const startBtn = createActionButton(() => container.start(), "media-playback-start-symbolic");
         const stopBtn = createActionButton(() => container.stop(), "media-playback-stop-symbolic");
-        const restartBtn = createActionButton(() => container.restart(), "system-reboot-symbolic");
+        const restartBtn = createActionButton(() => container.restart(), "view-refresh-symbolic");
         const pauseBtn = createActionButton(
             () => {
                 if (container.status.split(" ")[0] === "running") {
@@ -123,7 +122,7 @@ class extends PopupMenu.PopupSubMenuMenuItem {
         case "stopped": {
             actions.actor.add_child(startBtn);
             pauseBtn.reactive = false;
-            this.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
+            this.actor.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
             break;
         }
         case "Up":
@@ -131,17 +130,17 @@ class extends PopupMenu.PopupSubMenuMenuItem {
             actions.actor.add_child(stopBtn);
             deleteBtn.reactive = false;
             pauseBtn.checked = false;
-            this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
+            this.actor.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
             break;
         }
         case "Paused":
         case "paused": {
             pauseBtn.checked = true;
-            this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
+            this.actor.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
             break;
         }
         default:
-            this.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
+            this.actor.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
             break;
         }
         actions.actor.add_child(restartBtn);
@@ -154,7 +153,7 @@ class extends PopupMenu.PopupSubMenuMenuItem {
         this.menu.addAction("Watch Statistics", () => container.stats());
         this.menu.addAction("Copy Container Details", () => setClipboard(container.details()));
     }
-});
+};
 
 /** set clipboard with @param text
  *
@@ -171,7 +170,7 @@ function setClipboard(text) {
 function createActionButton(command, iconName) {
     const btn = new St.Button({
         track_hover: true,
-        style_class: "containers-action-button button",
+        style_class: "button",
         x_expand: true,
         x_align: Clutter.ActorAlign.CENTER,
     });
@@ -185,13 +184,12 @@ function createActionButton(command, iconName) {
     return btn;
 }
 
-var RemoveContainerDialog = GObject.registerClass(
 class RemoveContainerDialog extends ModalDialog.ModalDialog {
-    _init(container) {
-        super._init();
+    constructor(container) {
+        super();
         const content = new Dialog.MessageDialogContent({
             title: "Remove Container",
-            description: `Are you sure you want to remove container ${container.name}?`,
+            subtitle: `Are you sure you want to remove container ${container.name}?`,
         });
         this.contentLayout.add_child(content);
         this.addButton({
@@ -207,5 +205,5 @@ class RemoveContainerDialog extends ModalDialog.ModalDialog {
             label: "Remove",
         });
     }
-});
+};
 

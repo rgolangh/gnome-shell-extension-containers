@@ -158,9 +158,8 @@ async function discoverPodmanVersion() {
         throw new Error("Error getting podman version");
     }
 
-    const versionString = versionJson?.Client?.Version;
-    if (versionString) {
-        podmanVersion = new Version(versionString);
+    if (versionJson !== undefined && versionJson.Client !== undefined) {
+        podmanVersion = new Version(versionJson.Client.Version);
     } else {
         Logger.info("unable to set podman info, will fall back to syntax and output < 2.0.3");
     }
