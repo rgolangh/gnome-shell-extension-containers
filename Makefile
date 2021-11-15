@@ -1,5 +1,6 @@
 EXTRA_SOURCES = \
 	--extra-source=podman-icon.png \
+	--extra-source=classic.css \
 	--extra-source=modules
 
 

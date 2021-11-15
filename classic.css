@@ -1,0 +1,8 @@
+.button:checked {
+    color: #2e3436;
+    background-color: #efedec;
+    border-color: #cdc7c2;
+    text-shadow: none;
+    icon-shadow: none;
+    box-shadow: none;
+}
