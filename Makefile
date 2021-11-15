@@ -1,5 +1,6 @@
 EXTRA_SOURCES = \
         podman-icon.png \
+        classic.css \
         modules/*
 
 build:
