@@ -61,6 +61,7 @@ var ContainersMenu = GObject.registerClass(
                     this._renderMenu();
                 }
             });
+
             this._renderMenu();
         }
 
@@ -70,6 +71,19 @@ var ContainersMenu = GObject.registerClass(
                 Logger.info(`found ${containers.length} containers`);
 
                 this.menu.removeAll();
+
+                const prune = new PopupMenu.PopupMenuItem("Prune Containers");
+                prune.connect("activate",
+                    () => Podman.spawnCommandline("podman container prune -f"));
+
+                const newContainer = new PopupMenu.PopupMenuItem("New Fedora rawhide Container");
+                newContainer.connect("activate",
+                    () => Podman.spawnCommandline("podman run -di registry.fedoraproject.org/fedora-minimal:rawhide /bin/bash"));
+
+                this.menu.addMenuItem(prune);
+                this.menu.addMenuItem(newContainer);
+                this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
                 if (containers.length > 0) {
                     containers.forEach(container => {
                         Logger.debug(container.toString());
