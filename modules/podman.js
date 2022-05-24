@@ -136,11 +136,8 @@ class Container {
         ];
 
         // add more stats and info - inspect - SLOW
-        if (!this.inspected) {
-            this.inspect();
-            this.inspected = true;
-            containerDetails.push(`IP Address: ${this.ipAddress}`);
-        }
+        this.inspect();
+        containerDetails.push(`IP Address: ${this.ipAddress}`);
         return containerDetails.join("\n");
     }
 }
