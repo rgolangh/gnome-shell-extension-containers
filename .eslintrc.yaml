@@ -4,8 +4,7 @@
 # The initial file content was copied from gnome shell extension repo and is a conbination of the linting rules under the direcory
 # https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/tree/main/lint
 env:
-  es6: true
-  es2020: true
+  es2021: true
 extends: 'eslint:recommended'
 plugins:
   - jsdoc
@@ -259,4 +258,4 @@ globals:
   TextEncoder: readonly
   TextDecoder: readonly
 parserOptions:
-  ecmaVersion: 2020
+  ecmaVersion: 2022
