@@ -3,17 +3,16 @@ EXTRA_SOURCES = \
 	--extra-source=classic.css \
 	--extra-source=modules
 
-
-build:
+build: clean
 	gnome-extensions pack -f $(EXTRA_SOURCES)
 
-install:
+install: build
 	gnome-extensions install -f containers@royg.shell-extension.zip
 
-enable:
+enable: install
 	gnome-extensions enable containers@royg
 
-debug:
+debug: clean install
 	dbus-run-session -- gnome-shell --nested --wayland
 
 all: \
@@ -21,5 +20,9 @@ all: \
 	install \
 	enable
 
-.PHONY: build debug enable install all
+clean:
+	rm -f containers@royg.shell-extension.zip
+	rm -rf ~/.local/share/gnome-shell/extensions/containers@royg/
+
+.PHONY: clean build debug enable install all
 

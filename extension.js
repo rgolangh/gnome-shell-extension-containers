@@ -195,6 +195,7 @@ function createActionButton(command, iconName) {
     });
     btn.connect("clicked", () => {
         command();
+        containersMenu.menu.close()
     });
     return btn;
 }
