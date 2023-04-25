@@ -8,7 +8,8 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Logger = Me.imports.modules.logger;
 
-const KEEP_OPEN_ON_EXIT = true;
+const TERM_KEEP_ON_EXIT = true;
+const TERM_CLOSE_ON_EXIT = false;
 
 Gio._promisify(Gio.Subprocess.prototype,
     "communicate_utf8_async", "communicate_utf8_finish");
@@ -95,7 +96,8 @@ class Container {
     }
 
     logs() {
-        runCommandInTerminal("podman logs -f", this.name, "", KEEP_OPEN_ON_EXIT);
+        Logger.debug(`this state ${this.state} and is this === running ${this.state === "running"}`);
+        runCommandInTerminal("podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT: TERM_KEEP_ON_EXIT);
     }
 
     watchTop() {
