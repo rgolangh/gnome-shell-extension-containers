@@ -8,6 +8,9 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Logger = Me.imports.modules.logger;
 
+const TERM_KEEP_ON_EXIT = true;
+const TERM_CLOSE_ON_EXIT = false;
+
 Gio._promisify(Gio.Subprocess.prototype,
     "communicate_utf8_async", "communicate_utf8_finish");
 
@@ -93,7 +96,8 @@ class Container {
     }
 
     logs() {
-        runCommandInTerminal("podman logs -f", this.name, "");
+        Logger.debug(`this state ${this.state} and is this === running ${this.state === "running"}`);
+        runCommandInTerminal("podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT: TERM_KEEP_ON_EXIT);
     }
 
     watchTop() {
@@ -249,8 +253,13 @@ async function runCommand(command, containerName) {
  * @param {string} containerName {string} is the contaier name
  * @param {...string} args to pass to the invocation
  */
-function runCommandInTerminal(command, containerName, args) {
-    const cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
+function runCommandInTerminal(command, containerName, args, keepOpenOnExit) {
+    let cmdline;
+    if (keepOpenOnExit) {
+        cmdline = `gnome-terminal -- bash -c '${command} ${containerName} ${args};read i'`;
+    } else {
+        cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
+    }
     Logger.info(`running command ${cmdline}`);
     try {
         GLib.spawn_command_line_async(cmdline);
