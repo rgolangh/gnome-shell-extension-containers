@@ -10,4 +10,4 @@ jobs:
         node-version: '18'
     - run: npm init @eslint/config 
     - run: ls -la
-    - run: ./node_modules/.bin/eslint *.js modules/*.js
+    - run: npx eslint *.js modules/*.js
