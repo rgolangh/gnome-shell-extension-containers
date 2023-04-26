@@ -10,4 +10,5 @@ jobs:
         node-version: '18'
     - run: npm init @eslint/config 
     - run: ls -la
+    - run: pm install eslint-plugin-jsdoc@latest --save-dev
     - run: npx eslint *.js modules/*.js
