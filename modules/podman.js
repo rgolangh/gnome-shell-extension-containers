@@ -16,7 +16,7 @@ Gio._promisify(Gio.Subprocess.prototype,
 
 let podmanVersion;
 
-/** @returns list of containers : Container[] */
+/** @returns {Container[]} */
 // eslint-disable-next-line no-unused-vars
 async function getContainers() {
     if (podmanVersion === undefined) {
@@ -204,8 +204,8 @@ class Version {
     }
 }
 
-/** spawnCommandline runs a shell command and returns its output
- *
+/**
+ * spawnCommandline runs a shell command and returns its output
  * @param {string} cmdline - the command line to spawn
  * @returns {string} - the command output
  * @throws

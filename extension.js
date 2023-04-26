@@ -39,10 +39,9 @@ function disable() {
 
 /**
  * createIcon is just a convenience shortcut for standard icons
- *
  * @param {string} name is icon name
  * @param {string} styleClass is style_class
- * @returns new icon
+ * @returns {St.icon}
  */
 function createIcon(name, styleClass) {
     return new St.Icon({icon_name: name, style_class: `${styleClass} popup-menu-icon`});
@@ -176,7 +175,6 @@ class extends PopupMenu.PopupSubMenuMenuItem {
 
 /**
  * set clipboard with @param text
- *
  * @param {string} text to set the clipboard with
  */
 function setClipboard(text) {
@@ -185,10 +183,9 @@ function setClipboard(text) {
 
 /**
  * creates a button for a primary container action
- *
  * @param {Function} command is the action executed when clicking the button
  * @param {string} iconName is the icon name
- * @returns new St.Button
+ * @returns {St.Button}
  */
 function createActionButton(command, iconName) {
     const btn = new St.Button({
