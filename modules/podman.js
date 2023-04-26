@@ -97,7 +97,7 @@ class Container {
 
     logs() {
         Logger.debug(`this state ${this.state} and is this === running ${this.state === "running"}`);
-        runCommandInTerminal("podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT: TERM_KEEP_ON_EXIT);
+        runCommandInTerminal("podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT : TERM_KEEP_ON_EXIT);
     }
 
     watchTop() {
@@ -252,6 +252,9 @@ async function runCommand(command, containerName) {
  * @param {string} command {string} the command verb
  * @param {string} containerName {string} is the contaier name
  * @param {...string} args to pass to the invocation
+ * @param {boolean} keepOpenOnExit true means keep the terminal open when the command terminates
+ * and/or when the output stream is closed. False means that if the logs can't be followed the terminal
+ * just exits. For commands that are streaming like 'stats' this doesn't have and effect.
  */
 function runCommandInTerminal(command, containerName, args, keepOpenOnExit) {
     let cmdline;

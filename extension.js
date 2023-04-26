@@ -1,7 +1,7 @@
 "use strict";
 
-const Clutter  = imports.gi.Clutter;
- const Main = imports.ui.main;
+const Clutter = imports.gi.Clutter;
+const Main = imports.ui.main;
 const St = imports.gi.St;
 const Gio = imports.gi.Gio;
 const PanelMenu = imports.ui.panelMenu;
@@ -15,7 +15,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Podman = Me.imports.modules.podman;
 const Logger = Me.imports.modules.logger;
 
-let containersMenu
+let containersMenu;
 
 /**
  * enable is the entry point called by gnome-shell
@@ -45,8 +45,8 @@ function createIcon(name, styleClass) {
 }
 
 var ContainersMenu = GObject.registerClass(
-    class  ContainersMenu extends PanelMenu.Button {
-        _init () {
+    class ContainersMenu extends PanelMenu.Button {
+        _init() {
             super._init(0.0, "Containers");
             this.menu.box.add_style_class_name("containers-extension-menu");
             const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
