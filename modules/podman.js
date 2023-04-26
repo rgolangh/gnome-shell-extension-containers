@@ -16,7 +16,7 @@ Gio._promisify(Gio.Subprocess.prototype,
 
 let podmanVersion;
 
-/** @returns list of containers : Container[] */
+/** @returns {Container[]} list of containers as reported by podman */
 // eslint-disable-next-line no-unused-vars
 async function getContainers() {
     if (podmanVersion === undefined) {
@@ -97,7 +97,7 @@ class Container {
 
     logs() {
         Logger.debug(`this state ${this.state} and is this === running ${this.state === "running"}`);
-        runCommandInTerminal("podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT: TERM_KEEP_ON_EXIT);
+        runCommandInTerminal("podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT : TERM_KEEP_ON_EXIT);
     }
 
     watchTop() {
@@ -204,8 +204,8 @@ class Version {
     }
 }
 
-/** spawnCommandline runs a shell command and returns its output
- *
+/**
+ * spawnCommandline runs a shell command and returns its output
  * @param {string} cmdline - the command line to spawn
  * @returns {string} - the command output
  * @throws
@@ -223,10 +223,11 @@ async function spawnCommandline(cmdline) {
     return out;
 }
 
-/** runCommand runs a podman container command using the cli
- *
+/**
+ * runCommand runs a podman container command using the cli
  * @param {string} command the command verb
  * @param {string} containerName is the contaier name
+ * @returns {string} command output
  */
 async function runCommand(command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
@@ -245,13 +246,16 @@ async function runCommand(command, containerName) {
     return out;
 }
 
-/** runCommandInTerminal runs a podman container command using the cli
- *  and in gnome-terminal(unconfigurable atm) visible to users to present output.
- *  Useful for logs, top, and stats container-commands.
- *
+/**
+ * runCommandInTerminal runs a podman container command using the cli
+ * and in gnome-terminal(unconfigurable atm) visible to users to present output.
+ * Useful for logs, top, and stats container-commands.
  * @param {string} command {string} the command verb
  * @param {string} containerName {string} is the contaier name
  * @param {...string} args to pass to the invocation
+ * @param {boolean} keepOpenOnExit true means keep the terminal open when the command terminates
+ * and/or when the output stream is closed. False means that if the logs can't be followed the terminal
+ * just exits. For commands that are streaming like 'stats' this doesn't have and effect.
  */
 function runCommandInTerminal(command, containerName, args, keepOpenOnExit) {
     let cmdline;
