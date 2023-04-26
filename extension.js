@@ -28,17 +28,21 @@ function enable() {
     Main.panel.addToStatusArea("containers-menu", containersMenu);
 }
 
-/** disable is called when the main extension menu is closed **/
+/**
+ * disable is called when the main extension menu is closed
+ */
 // eslint-disable-next-line no-unused-vars
 function disable() {
     Logger.info("disabling containers extension");
     containersMenu.destroy();
 }
 
-/** createIcon is just a convenience shortcut for standard icons
+/**
+ * createIcon is just a convenience shortcut for standard icons
  *
  * @param {string} name is icon name
  * @param {string} styleClass is style_class
+ * @returns new icon
  */
 function createIcon(name, styleClass) {
     return new St.Icon({icon_name: name, style_class: `${styleClass} popup-menu-icon`});
@@ -170,18 +174,22 @@ class extends PopupMenu.PopupSubMenuMenuItem {
     }
 });
 
-/** set clipboard with @param text
+/**
+ * set clipboard with @param text
  *
- * @param {string} text to set the clipboard with*/
+ * @param {string} text to set the clipboard with
+ */
 function setClipboard(text) {
     St.Clipboard.get_default().set_text(St.ClipboardType.PRIMARY, text);
 }
 
-/** creates a button for a primary container action
+/**
+ * creates a button for a primary container action
  *
  * @param {Function} command is the action executed when clicking the button
  * @param {string} iconName is the icon name
- * */
+ * @returns new St.Button
+ */
 function createActionButton(command, iconName) {
     const btn = new St.Button({
         track_hover: true,
