@@ -16,7 +16,7 @@ Gio._promisify(Gio.Subprocess.prototype,
 
 let podmanVersion;
 
-/** @returns {Container[]} */
+/** @returns {Container[]} list of containers as reported by podman */
 // eslint-disable-next-line no-unused-vars
 async function getContainers() {
     if (podmanVersion === undefined) {
@@ -223,10 +223,11 @@ async function spawnCommandline(cmdline) {
     return out;
 }
 
-/** runCommand runs a podman container command using the cli
- *
+/**
+ * runCommand runs a podman container command using the cli
  * @param {string} command the command verb
  * @param {string} containerName is the contaier name
+ * @returns {string} command output
  */
 async function runCommand(command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
@@ -245,10 +246,10 @@ async function runCommand(command, containerName) {
     return out;
 }
 
-/** runCommandInTerminal runs a podman container command using the cli
- *  and in gnome-terminal(unconfigurable atm) visible to users to present output.
- *  Useful for logs, top, and stats container-commands.
- *
+/**
+ * runCommandInTerminal runs a podman container command using the cli
+ * and in gnome-terminal(unconfigurable atm) visible to users to present output.
+ * Useful for logs, top, and stats container-commands.
  * @param {string} command {string} the command verb
  * @param {string} containerName {string} is the contaier name
  * @param {...string} args to pass to the invocation

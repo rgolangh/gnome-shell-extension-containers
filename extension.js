@@ -41,7 +41,7 @@ function disable() {
  * createIcon is just a convenience shortcut for standard icons
  * @param {string} name is icon name
  * @param {string} styleClass is style_class
- * @returns {St.icon}
+ * @returns {St.icon} new icon
  */
 function createIcon(name, styleClass) {
     return new St.Icon({icon_name: name, style_class: `${styleClass} popup-menu-icon`});
@@ -185,7 +185,7 @@ function setClipboard(text) {
  * creates a button for a primary container action
  * @param {Function} command is the action executed when clicking the button
  * @param {string} iconName is the icon name
- * @returns {St.Button}
+ * @returns {St.Button} new icon
  */
 function createActionButton(command, iconName) {
     const btn = new St.Button({
