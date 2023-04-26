@@ -6,7 +6,7 @@
     "lint": "eslint *.js modules/*.js"
   },
   "devDependencies": {
-    "eslint": "^8.16.0",
+    "eslint": "^8.39.0",
     "eslint-plugin-jsdoc": "^43.3.1"
   }
 }
