@@ -5,7 +5,9 @@
 # https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/tree/main/lint
 env:
   es2021: true
-extends: 'eslint:recommended'
+extends:
+  - eslint:recommended
+  - plugin:jsdoc/recommended-error
 plugins:
   - jsdoc
 rules:
@@ -62,17 +64,6 @@ rules:
       - 'CallExpression[callee.object.name=GObject][callee.property.name=registerClass] > ClassExpression:first-child'
       # Allow dedenting chained member expressions
       MemberExpression: 'off'
-  jsdoc/check-alignment: error
-  jsdoc/check-param-names: error
-  jsdoc/check-tag-names: error
-  jsdoc/check-types: error
-  jsdoc/implements-on-classes: error
-  jsdoc/newline-after-description: error
-  jsdoc/require-jsdoc: error
-  jsdoc/require-param: error
-  jsdoc/require-param-description: error
-  jsdoc/require-param-name: error
-  jsdoc/require-param-type: error
   key-spacing:
     - error
     - beforeColon: false

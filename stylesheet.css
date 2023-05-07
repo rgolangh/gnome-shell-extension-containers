@@ -18,7 +18,7 @@
 	color: SkyBlue;
 }
 
-.button:checked {
+.containers-extension-menu .button:checked {
     color: #eeeeec;
     background-color: #2d2d2d;
     border-color: #191919;
