@@ -44,7 +44,7 @@ function disable() {
  * @returns {St.icon} new icon
  */
 function createIcon(name, styleClass) {
-    return new St.Icon({ icon_name: name, style_class: `${styleClass} popup-menu-icon` });
+    return new St.Icon({icon_name: name, style_class: `${styleClass} popup-menu-icon`});
 }
 
 var ContainersMenu = GObject.registerClass(
@@ -52,9 +52,9 @@ var ContainersMenu = GObject.registerClass(
         _init() {
             super._init(0.0, "Containers");
             this.menu.box.add_style_class_name("containers-extension-menu");
-            const hbox = new St.BoxLayout({ style_class: "panel-status-menu-box" });
+            const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
             const gicon = Gio.icon_new_for_string(`${Me.path}/podman-icon.png`);
-            const icon = new St.Icon({ gicon, icon_size: "24" });
+            const icon = new St.Icon({gicon, icon_size: "24"});
 
             hbox.add_child(icon);
             this.add_child(hbox);
@@ -108,7 +108,7 @@ var ContainerSubMenuItem = GObject.registerClass(
     class extends PopupMenu.PopupSubMenuMenuItem {
         _init(container) {
             super._init(container.name);
-            const actions = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false, style_class: "container-action-bar" });
+            const actions = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, style_class: "container-action-bar"});
             this.menu.addMenuItem(actions);
             this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
@@ -132,34 +132,34 @@ var ContainerSubMenuItem = GObject.registerClass(
                 "user-trash-symbolic.symbolic");
 
             switch (container.status.split(" ")[0]) {
-                case "Exited":
-                case "exited":
-                case "Created":
-                case "created":
-                case "configured":
-                case "stopped": {
-                    actions.actor.add_child(startBtn);
-                    pauseBtn.reactive = false;
-                    this.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
-                    break;
-                }
-                case "Up":
-                case "running": {
-                    actions.actor.add_child(stopBtn);
-                    deleteBtn.reactive = false;
-                    pauseBtn.checked = false;
-                    this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
-                    break;
-                }
-                case "Paused":
-                case "paused": {
-                    pauseBtn.checked = true;
-                    this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
-                    break;
-                }
-                default:
-                    this.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
-                    break;
+            case "Exited":
+            case "exited":
+            case "Created":
+            case "created":
+            case "configured":
+            case "stopped": {
+                actions.actor.add_child(startBtn);
+                pauseBtn.reactive = false;
+                this.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
+                break;
+            }
+            case "Up":
+            case "running": {
+                actions.actor.add_child(stopBtn);
+                deleteBtn.reactive = false;
+                pauseBtn.checked = false;
+                this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
+                break;
+            }
+            case "Paused":
+            case "paused": {
+                pauseBtn.checked = true;
+                this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
+                break;
+            }
+            default:
+                this.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
+                break;
             }
             actions.actor.add_child(restartBtn);
             actions.actor.add_child(pauseBtn);
@@ -183,7 +183,6 @@ function setClipboard(text) {
 
 /**
  * creates a button for a primary container action
- * 
  * @param {Function} command is the action executed when clicking the button
  * @param {string} iconName is the icon name
  * @returns {St.Button} new icon
