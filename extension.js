@@ -1,40 +1,42 @@
 "use strict";
 
-const Clutter = imports.gi.Clutter;
-const Main = imports.ui.main;
-const St = imports.gi.St;
-const Gio = imports.gi.Gio;
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
-const Dialog = imports.ui.dialog;
-const ModalDialog = imports.ui.modalDialog;
-const GObject = imports.gi.GObject;
+import Clutter from 'gi://Clutter';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import St from 'gi://St';
+import Gio from 'gi://Gio';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
+import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
+import GObject from 'gi://GObject';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Podman = Me.imports.modules.podman;
-const Logger = Me.imports.modules.logger;
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+
+import * as Podman from './modules/podman.js';
+import * as Logger from './modules/logger.js';
 
 let containersMenu;
 
-/**
- * enable is the entry point called by gnome-shell
- */
-// eslint-disable-next-line no-unused-vars
-function enable() {
-    Logger.info("enabling containers extension");
-    containersMenu = new ContainersMenu();
-    Logger.debug(containersMenu);
-    Main.panel.addToStatusArea("containers-menu", containersMenu);
-}
+export default class ContainersExtension {
+    /**
+     * enable is the entry point called by gnome-shell
+     */
+    // eslint-disable-next-line no-unused-vars
+    enable() {
+        Logger.info("enabling containers extension");
+        containersMenu = new ContainersMenu();
+        Logger.debug(containersMenu);
+        Main.panel.addToStatusArea("containers-menu", containersMenu);
+    }
 
-/**
- * disable is called when the main extension menu is closed
- */
-// eslint-disable-next-line no-unused-vars
-function disable() {
-    Logger.info("disabling containers extension");
-    containersMenu.destroy();
+    /**
+     * disable is called when the main extension menu is closed
+     */
+    // eslint-disable-next-line no-unused-vars
+    disable() {
+        Logger.info("disabling containers extension");
+        containersMenu.destroy();
+    }
 }
 
 /**
@@ -53,6 +55,7 @@ var ContainersMenu = GObject.registerClass(
             super._init(0.0, "Containers");
             this.menu.box.add_style_class_name("containers-extension-menu");
             const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
+            const Me = Extension.lookupByURL(import.meta.url);
             const gicon = Gio.icon_new_for_string(`${Me.path}/podman-icon.png`);
             const icon = new St.Icon({gicon, icon_size: "24"});
 
@@ -129,7 +132,7 @@ class extends PopupMenu.PopupSubMenuMenuItem {
         pauseBtn.toggle_mode = true;
         const deleteBtn = createActionButton(
             () => new RemoveContainerDialog(container).open(1, true),
-            "user-trash-symbolic.symbolic");
+            "media-eject-symbolic");
 
         switch (container.status.split(" ")[0]) {
         case "Exited":
