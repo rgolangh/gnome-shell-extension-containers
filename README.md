@@ -20,7 +20,8 @@ See the [gnome extensions page](https://extensions.gnome.org/extension/1500/cont
 
 # Install from source
 
-Checkout `master` branch for latest available, or `gnome-shell-x.xx` for a specific version.
+Checkout `main` branch for latest Gnome Shell version available.
+For older Gnome Shell versions see `gnome-shell-x.xx` branches per version.
 
 Clone, Pack, and Install
 
@@ -34,3 +35,12 @@ Enalble using `make enable` or using 'Tweaks' -> Extensions -> toggle 'Container
 <p>
   <img src="screenshot.png" width="350" title="gnome-shell-extension-containers">
 </p>
+
+# Developing / Hacking
+
+Clone and make your changes, and then use this to spin an inline gnome-shell in a dedicated window (works with your system dbus):
+```
+make debug
+```
+
+
