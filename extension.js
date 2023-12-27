@@ -17,7 +17,7 @@ import * as Logger from './modules/logger.js';
 
 let containersMenu;
 
-export default class ContainersExtension {
+export default class ContainersExtension extends Extension {
     /**
      * enable is the entry point called by gnome-shell
      */
@@ -55,8 +55,8 @@ var ContainersMenu = GObject.registerClass(
             super._init(0.0, "Containers");
             this.menu.box.add_style_class_name("containers-extension-menu");
             const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
-            const Me = Extension.lookupByURL(import.meta.url);
-            const gicon = Gio.icon_new_for_string(`${Me.path}/podman-icon.png`);
+            const ext = Extension.lookupByUUID("containers@royg");
+            const gicon = Gio.icon_new_for_string(`${ext.path}/podman-icon.png`);
             const icon = new St.Icon({gicon, icon_size: "24"});
 
             hbox.add_child(icon);
