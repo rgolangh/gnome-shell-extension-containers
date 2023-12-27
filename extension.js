@@ -1,44 +1,47 @@
 "use strict";
 
-const Clutter = imports.gi.Clutter;
-const Main = imports.ui.main;
-const St = imports.gi.St;
-const Gio = imports.gi.Gio;
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
-const Dialog = imports.ui.dialog;
-const ModalDialog = imports.ui.modalDialog;
-const GObject = imports.gi.GObject;
+import Clutter from 'gi://Clutter';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import St from 'gi://St';
+import Gio from 'gi://Gio';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
+import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
+import GObject from 'gi://GObject';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Podman = Me.imports.modules.podman;
-const Logger = Me.imports.modules.logger;
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+
+import * as Podman from './modules/podman.js';
 
 let containersMenu;
 
+export default class ContainersExtension extends Extension {
+    /**
+     * enable is the entry point called by gnome-shell
+     */
+    // eslint-disable-next-line no-unused-vars
+    enable() {
+       console.log(`enabling ${this.uuid} extension`);
+        containersMenu = new ContainersMenu();
+        Main.panel.addToStatusArea("containers-menu", containersMenu);
+    }
+
+    /**
+     * disable is called when the main extension menu is closed
+     */
+    // eslint-disable-next-line no-unused-vars
+    disable() {
+        console.log("disabling containers extension");
+        containersMenu.destroy();
+    }
+}
+
 /**
- * enable is the entry point called by gnome-shell
- */
-// eslint-disable-next-line no-unused-vars
-function enable() {
-    Logger.info("enabling containers extension");
-    containersMenu = new ContainersMenu();
-    Logger.debug(containersMenu);
-    Main.panel.addToStatusArea("containers-menu", containersMenu);
-}
-
-/** disable is called when the main extension menu is closed **/
-// eslint-disable-next-line no-unused-vars
-function disable() {
-    Logger.info("disabling containers extension");
-    containersMenu.destroy();
-}
-
-/** createIcon is just a convenience shortcut for standard icons
- *
+ * createIcon is just a convenience shortcut for standard icons
  * @param {string} name is icon name
  * @param {string} styleClass is style_class
+ * @returns {St.icon} new icon
  */
 function createIcon(name, styleClass) {
     return new St.Icon({icon_name: name, style_class: `${styleClass} popup-menu-icon`});
@@ -50,7 +53,8 @@ var ContainersMenu = GObject.registerClass(
             super._init(0.0, "Containers");
             this.menu.box.add_style_class_name("containers-extension-menu");
             const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
-            const gicon = Gio.icon_new_for_string(`${Me.path}/podman-icon.png`);
+            const ext = Extension.lookupByUUID("containers@royg");
+            const gicon = Gio.icon_new_for_string(`${ext.path}/podman-icon.png`);
             const icon = new St.Icon({gicon, icon_size: "24"});
 
             hbox.add_child(icon);
@@ -68,7 +72,7 @@ var ContainersMenu = GObject.registerClass(
         async _renderMenu() {
             try {
                 const containers = await Podman.getContainers();
-                Logger.info(`found ${containers.length} containers`);
+                console.debug(`found ${containers.length} containers`);
 
                 this.menu.removeAll();
 
@@ -86,7 +90,7 @@ var ContainersMenu = GObject.registerClass(
 
                 if (containers.length > 0) {
                     containers.forEach(container => {
-                        Logger.debug(container.toString());
+                        console.debug(container.toString());
                         this.menu.addMenuItem(new ContainerSubMenuItem(container, container.name));
                     });
                 } else {
@@ -96,7 +100,7 @@ var ContainersMenu = GObject.registerClass(
                 this.menu.removeAll();
                 const errMsg = "Error occurred when fetching containers";
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
-                Logger.info(`${errMsg}: ${err}`);
+                console.error(`${errMsg}: ${err}`);
             }
         }
     });
@@ -126,7 +130,7 @@ class extends PopupMenu.PopupSubMenuMenuItem {
         pauseBtn.toggle_mode = true;
         const deleteBtn = createActionButton(
             () => new RemoveContainerDialog(container).open(1, true),
-            "user-trash-symbolic.symbolic");
+            "media-eject-symbolic");
 
         switch (container.status.split(" ")[0]) {
         case "Exited":
@@ -170,18 +174,20 @@ class extends PopupMenu.PopupSubMenuMenuItem {
     }
 });
 
-/** set clipboard with @param text
- *
- * @param {string} text to set the clipboard with*/
+/**
+ * set clipboard with @param text
+ * @param {string} text to set the clipboard with
+ */
 function setClipboard(text) {
     St.Clipboard.get_default().set_text(St.ClipboardType.PRIMARY, text);
 }
 
-/** creates a button for a primary container action
- *
+/**
+ * creates a button for a primary container action
  * @param {Function} command is the action executed when clicking the button
  * @param {string} iconName is the icon name
- * */
+ * @returns {St.Button} new icon
+ */
 function createActionButton(command, iconName) {
     const btn = new St.Button({
         track_hover: true,

@@ -18,7 +18,7 @@
 	color: SkyBlue;
 }
 
-.button:checked {
+.containers-extension-menu .button:checked {
     color: #eeeeec;
     background-color: #2d2d2d;
     border-color: #191919;
@@ -33,6 +33,7 @@
 }
 
 .container-action-bar {
+    background-color: inherit;
     margin-right: 40px;
 	margin-left: 12px;
 }

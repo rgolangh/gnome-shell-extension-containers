@@ -1,21 +1,21 @@
 "use strict";
 
-const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
-const Main = imports.ui.main;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Logger = Me.imports.modules.logger;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+
+const TERM_KEEP_ON_EXIT = true;
+const TERM_CLOSE_ON_EXIT = false;
 
 Gio._promisify(Gio.Subprocess.prototype,
     "communicate_utf8_async", "communicate_utf8_finish");
 
 let podmanVersion;
 
-/** @returns list of containers : Container[] */
+/** @returns {Container[]} list of containers as reported by podman */
 // eslint-disable-next-line no-unused-vars
-async function getContainers() {
+export async function getContainers() {
     if (podmanVersion === undefined) {
         await discoverPodmanVersion();
     }
@@ -26,7 +26,7 @@ async function getContainers() {
         const out = await spawnCommandline("podman ps -a --format json");
         jsonContainers = JSON.parse(out);
     } catch (e) {
-        Logger.info(e.message);
+        console.error(e.message);
         throw new Error("Error occurred when fetching containers");
     }
 
@@ -93,7 +93,8 @@ class Container {
     }
 
     logs() {
-        runCommandInTerminal("podman logs -f", this.name, "");
+        console.debug(`this state ${this.state} and is this === running ${this.state === "running"}`);
+        runCommandInTerminal("podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT : TERM_KEEP_ON_EXIT);
     }
 
     watchTop() {
@@ -151,7 +152,7 @@ async function discoverPodmanVersion() {
         const out = await spawnCommandline("podman version --format json");
         versionJson = JSON.parse(out);
     } catch (e) {
-        Logger.info(e.message);
+        console.error(e.message);
         throw new Error("Error getting podman version");
     }
 
@@ -159,9 +160,9 @@ async function discoverPodmanVersion() {
     if (versionString) {
         podmanVersion = new Version(versionString);
     } else {
-        Logger.info("unable to set podman info, will fall back to syntax and output < 2.0.3");
+        console.warn("unable to set podman info, will fall back to syntax and output < 2.0.3");
     }
-    Logger.debug(podmanVersion);
+    console.debug(podmanVersion);
 }
 
 class Version {
@@ -179,7 +180,7 @@ class Version {
     }
 
     compare(other) {
-        Logger.debug(`compare ${this} with ${other}`);
+        console.debug(`compare ${this} with ${other}`);
         if (this.major !== other.major) {
             return Math.sign(this.major - other.major);
         }
@@ -200,13 +201,13 @@ class Version {
     }
 }
 
-/** spawnCommandline runs a shell command and returns its output
- *
+/**
+ * spawnCommandline runs a shell command and returns its output
  * @param {string} cmdline - the command line to spawn
  * @returns {string} - the command output
  * @throws
  */
-async function spawnCommandline(cmdline) {
+export async function spawnCommandline(cmdline) {
     const [, argv] = GLib.shell_parse_argv(cmdline);
     const cmd = Gio.Subprocess.new(argv,
         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
@@ -219,46 +220,55 @@ async function spawnCommandline(cmdline) {
     return out;
 }
 
-/** runCommand runs a podman container command using the cli
- *
+/**
+ * runCommand runs a podman container command using the cli
  * @param {string} command the command verb
  * @param {string} containerName is the contaier name
+ * @returns {string} command output
  */
 async function runCommand(command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
-    Logger.info(`running command ${cmdline}`);
+    console.info(`running command ${cmdline}`);
 
     let out;
     try {
         out = await spawnCommandline(cmdline);
-        Logger.info(`command on ${containerName} terminated successfully`);
+        console.info(`command on ${containerName} terminated successfully`);
     } catch (e) {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
         Main.notify(errMsg, e.message);
-        Logger.info(`${errMsg}: ${e.message}`);
+        console.error(`${errMsg}: ${e.message}`);
     }
-    Logger.debug(out);
+    console.debug(out);
     return out;
 }
 
-/** runCommandInTerminal runs a podman container command using the cli
- *  and in gnome-terminal(unconfigurable atm) visible to users to present output.
- *  Useful for logs, top, and stats container-commands.
- *
+/**
+ * runCommandInTerminal runs a podman container command using the cli
+ * and in gnome-terminal(unconfigurable atm) visible to users to present output.
+ * Useful for logs, top, and stats container-commands.
  * @param {string} command {string} the command verb
  * @param {string} containerName {string} is the contaier name
  * @param {...string} args to pass to the invocation
+ * @param {boolean} keepOpenOnExit true means keep the terminal open when the command terminates
+ * and/or when the output stream is closed. False means that if the logs can't be followed the terminal
+ * just exits. For commands that are streaming like 'stats' this doesn't have and effect.
  */
-function runCommandInTerminal(command, containerName, args) {
-    const cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
-    Logger.info(`running command ${cmdline}`);
+function runCommandInTerminal(command, containerName, args, keepOpenOnExit) {
+    let cmdline;
+    if (keepOpenOnExit) {
+        cmdline = `gnome-terminal -- bash -c '${command} ${containerName} ${args};read i'`;
+    } else {
+        cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
+    }
+    console.debug(`running command ${cmdline}`);
     try {
         GLib.spawn_command_line_async(cmdline);
-        Logger.info(`command on ${containerName} terminated successfully`);
+        console.debug(`command on ${containerName} terminated successfully`);
     } catch (e) {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
         Main.notify(errMsg);
-        Logger.info(errMsg);
+        console.error(errMsg);
     }
 }
 
