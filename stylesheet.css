@@ -33,6 +33,7 @@
 }
 
 .container-action-bar {
+    background-color: inherit;
     margin-right: 40px;
 	margin-left: 12px;
 }
