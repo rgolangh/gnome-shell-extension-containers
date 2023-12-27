@@ -7,7 +7,7 @@ EXTRA_SOURCES = \
 build:
 	gnome-extensions pack -f $(EXTRA_SOURCES)
 
-install:
+install: build
 	gnome-extensions install -f containers@royg.shell-extension.zip
 
 enable:
@@ -17,7 +17,6 @@ debug:
 	dbus-run-session -- gnome-shell --nested --wayland
 
 all: \
-	build \
 	install \
 	enable
 
