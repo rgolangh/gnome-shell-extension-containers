@@ -5,7 +5,7 @@ EXTRA_SOURCES = \
 
 
 build:
-	gnome-extensions pack -f $(EXTRA_SOURCES)
+	gnome-extensions pack -f $(EXTRA_SOURCES) src/
 
 install: build
 	gnome-extensions install -f containers@royg.shell-extension.zip
