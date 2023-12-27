@@ -13,7 +13,6 @@ import GObject from 'gi://GObject';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Podman from './modules/podman.js';
-import * as Logger from './modules/logger.js';
 
 let containersMenu;
 
@@ -23,9 +22,8 @@ export default class ContainersExtension extends Extension {
      */
     // eslint-disable-next-line no-unused-vars
     enable() {
-        Logger.info("enabling containers extension");
+       console.log(`enabling ${this.uuid} extension`);
         containersMenu = new ContainersMenu();
-        Logger.debug(containersMenu);
         Main.panel.addToStatusArea("containers-menu", containersMenu);
     }
 
@@ -34,7 +32,7 @@ export default class ContainersExtension extends Extension {
      */
     // eslint-disable-next-line no-unused-vars
     disable() {
-        Logger.info("disabling containers extension");
+        console.log("disabling containers extension");
         containersMenu.destroy();
     }
 }
@@ -74,7 +72,7 @@ var ContainersMenu = GObject.registerClass(
         async _renderMenu() {
             try {
                 const containers = await Podman.getContainers();
-                Logger.info(`found ${containers.length} containers`);
+                console.debug(`found ${containers.length} containers`);
 
                 this.menu.removeAll();
 
@@ -92,7 +90,7 @@ var ContainersMenu = GObject.registerClass(
 
                 if (containers.length > 0) {
                     containers.forEach(container => {
-                        Logger.debug(container.toString());
+                        console.debug(container.toString());
                         this.menu.addMenuItem(new ContainerSubMenuItem(container, container.name));
                     });
                 } else {
@@ -102,7 +100,7 @@ var ContainersMenu = GObject.registerClass(
                 this.menu.removeAll();
                 const errMsg = "Error occurred when fetching containers";
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
-                Logger.info(`${errMsg}: ${err}`);
+                console.error(`${errMsg}: ${err}`);
             }
         }
     });
