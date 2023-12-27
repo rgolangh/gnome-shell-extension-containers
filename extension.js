@@ -13,7 +13,6 @@ const GObject = imports.gi.GObject;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Podman = Me.imports.modules.podman;
-const Logger = Me.imports.modules.logger;
 
 let containersMenu;
 
@@ -23,9 +22,8 @@ export default class ContainersExtension extends Extension {
      */
     // eslint-disable-next-line no-unused-vars
     enable() {
-        Logger.info("enabling containers extension");
+        console.log(`enabling ${this.uuid} extension`);
         containersMenu = new ContainersMenu();
-        Logger.debug(containersMenu);
         Main.panel.addToStatusArea("containers-menu", containersMenu);
     }
 
@@ -34,7 +32,7 @@ export default class ContainersExtension extends Extension {
      */
     // eslint-disable-next-line no-unused-vars
     disable() {
-        Logger.info("disabling containers extension");
+        console.log("disabling containers extension");
         containersMenu.destroy();
     }
 }
@@ -55,7 +53,7 @@ var ContainersMenu = GObject.registerClass(
             super._init(0.0, "Containers");
             this.menu.box.add_style_class_name("containers-extension-menu");
             const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
-            const ext = Extension.lookupByUUID("containers@royg");
+            const ext = Me.lookupByUUID("containers@royg");
             const gicon = Gio.icon_new_for_string(`${ext.path}/podman-icon.png`);
             const icon = new St.Icon({gicon, icon_size: "24"});
 
@@ -74,7 +72,7 @@ var ContainersMenu = GObject.registerClass(
         async _renderMenu() {
             try {
                 const containers = await Podman.getContainers();
-                Logger.info(`found ${containers.length} containers`);
+                console.debug(`found ${containers.length} containers`);
 
                 this.menu.removeAll();
 
@@ -92,7 +90,7 @@ var ContainersMenu = GObject.registerClass(
 
                 if (containers.length > 0) {
                     containers.forEach(container => {
-                        Logger.debug(container.toString());
+                        console.debug(container.toString());
                         this.menu.addMenuItem(new ContainerSubMenuItem(container, container.name));
                     });
                 } else {
@@ -102,7 +100,7 @@ var ContainersMenu = GObject.registerClass(
                 this.menu.removeAll();
                 const errMsg = "Error occurred when fetching containers";
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
-                Logger.info(`${errMsg}: ${err}`);
+                console.error(`${errMsg}: ${err}`);
             }
         }
     });

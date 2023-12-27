@@ -4,10 +4,6 @@ const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Main = imports.ui.main;
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Logger = Me.imports.modules.logger;
-
 const TERM_KEEP_ON_EXIT = true;
 const TERM_CLOSE_ON_EXIT = false;
 
@@ -29,7 +25,7 @@ async function getContainers() {
         const out = await spawnCommandline("podman ps -a --format json");
         jsonContainers = JSON.parse(out);
     } catch (e) {
-        Logger.info(e.message);
+        console.error(e.message);
         throw new Error("Error occurred when fetching containers");
     }
 
@@ -96,7 +92,7 @@ class Container {
     }
 
     logs() {
-        Logger.debug(`this state ${this.state} and is this === running ${this.state === "running"}`);
+        console.debug(`this state ${this.state} and is this === running ${this.state === "running"}`);
         runCommandInTerminal("podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT : TERM_KEEP_ON_EXIT);
     }
 
@@ -155,7 +151,7 @@ async function discoverPodmanVersion() {
         const out = await spawnCommandline("podman version --format json");
         versionJson = JSON.parse(out);
     } catch (e) {
-        Logger.info(e.message);
+        console.error(e.message);
         throw new Error("Error getting podman version");
     }
 
@@ -163,9 +159,9 @@ async function discoverPodmanVersion() {
     if (versionString) {
         podmanVersion = new Version(versionString);
     } else {
-        Logger.info("unable to set podman info, will fall back to syntax and output < 2.0.3");
+        console.warn("unable to set podman info, will fall back to syntax and output < 2.0.3");
     }
-    Logger.debug(podmanVersion);
+    console.debug(podmanVersion);
 }
 
 class Version {
@@ -183,7 +179,7 @@ class Version {
     }
 
     compare(other) {
-        Logger.debug(`compare ${this} with ${other}`);
+        console.debug(`compare ${this} with ${other}`);
         if (this.major !== other.major) {
             return Math.sign(this.major - other.major);
         }
@@ -231,18 +227,18 @@ async function spawnCommandline(cmdline) {
  */
 async function runCommand(command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
-    Logger.info(`running command ${cmdline}`);
+    console.info(`running command ${cmdline}`);
 
     let out;
     try {
         out = await spawnCommandline(cmdline);
-        Logger.info(`command on ${containerName} terminated successfully`);
+        console.info(`command on ${containerName} terminated successfully`);
     } catch (e) {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
         Main.notify(errMsg, e.message);
-        Logger.info(`${errMsg}: ${e.message}`);
+        console.error(`${errMsg}: ${e.message}`);
     }
-    Logger.debug(out);
+    console.debug(out);
     return out;
 }
 
@@ -264,14 +260,14 @@ function runCommandInTerminal(command, containerName, args, keepOpenOnExit) {
     } else {
         cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
     }
-    Logger.info(`running command ${cmdline}`);
+    console.debug(`running command ${cmdline}`);
     try {
         GLib.spawn_command_line_async(cmdline);
-        Logger.info(`command on ${containerName} terminated successfully`);
+        console.debug(`command on ${containerName} terminated successfully`);
     } catch (e) {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
         Main.notify(errMsg);
-        Logger.info(errMsg);
+        console.error(errMsg);
     }
 }
 

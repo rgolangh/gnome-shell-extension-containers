@@ -14,7 +14,7 @@ enable:
 	gnome-extensions enable containers@royg
 
 debug:
-	dbus-run-session -- gnome-shell --nested --wayland
+	G_MESSAGES_DEBUG="GNOME Shell" dbus-run-session -- gnome-shell --nested --wayland
 
 all: \
 	install \
