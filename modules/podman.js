@@ -1,12 +1,10 @@
 "use strict";
 
-const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
-const Main = imports.ui.main;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Logger = Me.imports.modules.logger;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Logger from './logger.js';
 
 const TERM_KEEP_ON_EXIT = true;
 const TERM_CLOSE_ON_EXIT = false;
@@ -18,7 +16,7 @@ let podmanVersion;
 
 /** @returns {Container[]} list of containers as reported by podman */
 // eslint-disable-next-line no-unused-vars
-async function getContainers() {
+export async function getContainers() {
     if (podmanVersion === undefined) {
         await discoverPodmanVersion();
     }
@@ -210,7 +208,7 @@ class Version {
  * @returns {string} - the command output
  * @throws
  */
-async function spawnCommandline(cmdline) {
+export async function spawnCommandline(cmdline) {
     const [, argv] = GLib.shell_parse_argv(cmdline);
     const cmd = Gio.Subprocess.new(argv,
         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
