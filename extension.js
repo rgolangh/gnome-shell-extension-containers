@@ -17,24 +17,26 @@ const Logger = Me.imports.modules.logger;
 
 let containersMenu;
 
-/**
- * enable is the entry point called by gnome-shell
- */
-// eslint-disable-next-line no-unused-vars
-function enable() {
-    Logger.info("enabling containers extension");
-    containersMenu = new ContainersMenu();
-    Logger.debug(containersMenu);
-    Main.panel.addToStatusArea("containers-menu", containersMenu);
-}
+export default class ContainersExtension extends Extension {
+    /**
+     * enable is the entry point called by gnome-shell
+     */
+    // eslint-disable-next-line no-unused-vars
+    enable() {
+        Logger.info("enabling containers extension");
+        containersMenu = new ContainersMenu();
+        Logger.debug(containersMenu);
+        Main.panel.addToStatusArea("containers-menu", containersMenu);
+    }
 
-/**
- * disable is called when the main extension menu is closed
- */
-// eslint-disable-next-line no-unused-vars
-function disable() {
-    Logger.info("disabling containers extension");
-    containersMenu.destroy();
+    /**
+     * disable is called when the main extension menu is closed
+     */
+    // eslint-disable-next-line no-unused-vars
+    disable() {
+        Logger.info("disabling containers extension");
+        containersMenu.destroy();
+    }
 }
 
 /**
@@ -53,7 +55,8 @@ var ContainersMenu = GObject.registerClass(
             super._init(0.0, "Containers");
             this.menu.box.add_style_class_name("containers-extension-menu");
             const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
-            const gicon = Gio.icon_new_for_string(`${Me.path}/podman-icon.png`);
+            const ext = Extension.lookupByUUID("containers@royg");
+            const gicon = Gio.icon_new_for_string(`${ext.path}/podman-icon.png`);
             const icon = new St.Icon({gicon, icon_size: "24"});
 
             hbox.add_child(icon);
