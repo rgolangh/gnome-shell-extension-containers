@@ -14,7 +14,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Podman = Me.imports.modules.podman;
 
-export default class ContainersExtension extends Extension {
+class ContainersExtension {
     /**
      * enable is the entry point called by gnome-shell
      */
@@ -36,6 +36,10 @@ export default class ContainersExtension extends Extension {
     }
 }
 
+function init(meta) {
+    console.debug(`initializing ${meta.metadata.name}`);
+    return new ContainersExtension();
+}
 /**
  * createIcon is just a convenience shortcut for standard icons
  * @param {string} name is icon name
@@ -55,8 +59,7 @@ class ContainersMenu extends PanelMenu.Button {
         super(0.0, "Containers");
         this.menu.box.add_style_class_name("containers-extension-menu");
         const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
-        const ext = Me.lookupByUUID("containers@royg");
-        const gicon = Gio.icon_new_for_string(`${ext.path}/podman-icon.png`);
+        const gicon = Gio.icon_new_for_string(`${Me.path}/podman-icon.png`);
         const icon = new St.Icon({gicon, icon_size: "24"});
 
         hbox.add_child(icon);
