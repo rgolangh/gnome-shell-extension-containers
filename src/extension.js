@@ -46,68 +46,74 @@ function createIcon(name, styleClass) {
     return new St.Icon({icon_name: name, style_class: `${styleClass} popup-menu-icon`});
 }
 
-var ContainersMenu = GObject.registerClass(
-    class ContainersMenu extends PanelMenu.Button {
-        _init() {
-            super._init(0.0, "Containers");
-            this.menu.box.add_style_class_name("containers-extension-menu");
-            const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
-            const ext = Extension.lookupByUUID("containers@royg");
-            const gicon = Gio.icon_new_for_string(`${ext.path}/podman-icon.png`);
-            const icon = new St.Icon({gicon, icon_size: "24"});
+class ContainersMenu extends PanelMenu.Button {
+    static {
+        GObject.registerClass(this);
+    }
 
-            hbox.add_child(icon);
-            this.add_child(hbox);
+    constructor() {
+        super(0.0, "Containers");
+        this.menu.box.add_style_class_name("containers-extension-menu");
+        const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
+        const ext = Extension.lookupByUUID("containers@royg");
+        const gicon = Gio.icon_new_for_string(`${ext.path}/podman-icon.png`);
+        const icon = new St.Icon({gicon, icon_size: "24"});
 
-            this.menu.connect("open-state-changed", () => {
-                if (this.menu.isOpen) {
-                    this._renderMenu();
-                }
-            });
+        hbox.add_child(icon);
+        this.add_child(hbox);
 
-            this._renderMenu();
-        }
-
-        async _renderMenu() {
-            try {
-                const containers = await Podman.getContainers();
-                console.debug(`found ${containers.length} containers`);
-
-                this.menu.removeAll();
-
-                const prune = new PopupMenu.PopupMenuItem("Prune Containers");
-                prune.connect("activate",
-                    () => Podman.spawnCommandline("podman container prune -f"));
-
-                const newContainer = new PopupMenu.PopupMenuItem("New Fedora rawhide Container");
-                newContainer.connect("activate",
-                    () => Podman.spawnCommandline("podman run -di registry.fedoraproject.org/fedora-minimal:rawhide /bin/bash"));
-
-                this.menu.addMenuItem(prune);
-                this.menu.addMenuItem(newContainer);
-                this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-                if (containers.length > 0) {
-                    containers.forEach(container => {
-                        console.debug(container.toString());
-                        this.menu.addMenuItem(new ContainerSubMenuItem(container, container.name));
-                    });
-                } else {
-                    this.menu.addMenuItem(new PopupMenu.PopupMenuItem("No containers detected"));
-                }
-            } catch (err) {
-                this.menu.removeAll();
-                const errMsg = "Error occurred when fetching containers";
-                this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
-                console.error(`${errMsg}: ${err}`);
+        this.menu.connect("open-state-changed", () => {
+            if (this.menu.isOpen) {
+                this._renderMenu();
             }
-        }
-    });
+        });
 
-var ContainerSubMenuItem = GObject.registerClass(
-class extends PopupMenu.PopupSubMenuMenuItem {
-    _init(container) {
-        super._init(container.name);
+        this._renderMenu();
+    }
+
+    async _renderMenu() {
+        try {
+            const containers = await Podman.getContainers();
+            console.debug(`found ${containers.length} containers`);
+
+            this.menu.removeAll();
+
+            const prune = new PopupMenu.PopupMenuItem("Prune Containers");
+            prune.connect("activate",
+                () => Podman.spawnCommandline("podman container prune -f"));
+
+            const newContainer = new PopupMenu.PopupMenuItem("New Fedora rawhide Container");
+            newContainer.connect("activate",
+                () => Podman.spawnCommandline("podman run -di registry.fedoraproject.org/fedora-minimal:rawhide /bin/bash"));
+
+            this.menu.addMenuItem(prune);
+            this.menu.addMenuItem(newContainer);
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+            if (containers.length > 0) {
+                containers.forEach(container => {
+                    console.debug(container.toString());
+                    this.menu.addMenuItem(new ContainerSubMenuItem(container, container.name));
+                });
+            } else {
+                this.menu.addMenuItem(new PopupMenu.PopupMenuItem("No containers detected"));
+            }
+        } catch (err) {
+            this.menu.removeAll();
+            const errMsg = "Error occurred when fetching containers";
+            this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
+            console.error(`${errMsg}: ${err}`);
+        }
+    }
+}
+
+class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
+    static {
+        GObject.registerClass(this);
+    }
+
+    constructor(container) {
+        super(container.name);
         const actions = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, style_class: "container-action-bar"});
         this.menu.addMenuItem(actions);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -132,34 +138,34 @@ class extends PopupMenu.PopupSubMenuMenuItem {
             "media-eject-symbolic");
 
         switch (container.status.split(" ")[0]) {
-        case "Exited":
-        case "exited":
-        case "Created":
-        case "created":
-        case "configured":
-        case "stopped": {
-            actions.actor.add_child(startBtn);
-            pauseBtn.reactive = false;
-            this.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
-            break;
-        }
-        case "Up":
-        case "running": {
-            actions.actor.add_child(stopBtn);
-            deleteBtn.reactive = false;
-            pauseBtn.checked = false;
-            this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
-            break;
-        }
-        case "Paused":
-        case "paused": {
-            pauseBtn.checked = true;
-            this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
-            break;
-        }
-        default:
-            this.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
-            break;
+            case "Exited":
+            case "exited":
+            case "Created":
+            case "created":
+            case "configured":
+            case "stopped": {
+                actions.actor.add_child(startBtn);
+                pauseBtn.reactive = false;
+                this.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
+                break;
+            }
+            case "Up":
+            case "running": {
+                actions.actor.add_child(stopBtn);
+                deleteBtn.reactive = false;
+                pauseBtn.checked = false;
+                this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
+                break;
+            }
+            case "Paused":
+            case "paused": {
+                pauseBtn.checked = true;
+                this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
+                break;
+            }
+            default:
+                this.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
+                break;
         }
         actions.actor.add_child(restartBtn);
         actions.actor.add_child(pauseBtn);
@@ -171,7 +177,7 @@ class extends PopupMenu.PopupSubMenuMenuItem {
         this.menu.addAction("Watch Statistics", () => container.stats());
         this.menu.addAction("Copy Container Details", () => setClipboard(container.details()));
     }
-});
+}
 
 /**
  * set clipboard with @param text
@@ -204,10 +210,13 @@ function createActionButton(command, iconName) {
     return btn;
 }
 
-var RemoveContainerDialog = GObject.registerClass(
 class RemoveContainerDialog extends ModalDialog.ModalDialog {
-    _init(container) {
-        super._init();
+    static {
+        GObject.registerClass(this);
+    }
+
+    constructor(container) {
+        super();
         const content = new Dialog.MessageDialogContent({
             title: "Remove Container",
             description: `Are you sure you want to remove container ${container.name}?`,
@@ -226,5 +235,5 @@ class RemoveContainerDialog extends ModalDialog.ModalDialog {
             label: "Remove",
         });
     }
-});
+}
 
