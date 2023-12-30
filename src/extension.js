@@ -14,8 +14,6 @@ import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Podman from './modules/podman.js';
 
-let containersMenu;
-
 export default class ContainersExtension extends Extension {
     /**
      * enable is the entry point called by gnome-shell
@@ -23,8 +21,8 @@ export default class ContainersExtension extends Extension {
     // eslint-disable-next-line no-unused-vars
     enable() {
         console.log(`enabling ${this.uuid} extension`);
-        containersMenu = new ContainersMenu();
-        Main.panel.addToStatusArea("containers-menu", containersMenu);
+        this.containersMenu = new ContainersMenu();
+        Main.panel.addToStatusArea("containers-menu", this.containersMenu);
     }
 
     /**
@@ -33,8 +31,8 @@ export default class ContainersExtension extends Extension {
     // eslint-disable-next-line no-unused-vars
     disable() {
         console.log("disabling containers extension");
-        containersMenu.destroy();
-        containersMenu = null;
+        this.containersMenu.destroy();
+        this.containersMenu = null;
     }
 }
 
