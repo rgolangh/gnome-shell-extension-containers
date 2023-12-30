@@ -22,7 +22,7 @@ export default class ContainersExtension extends Extension {
      */
     // eslint-disable-next-line no-unused-vars
     enable() {
-       console.log(`enabling ${this.uuid} extension`);
+        console.log(`enabling ${this.uuid} extension`);
         containersMenu = new ContainersMenu();
         Main.panel.addToStatusArea("containers-menu", containersMenu);
     }
@@ -34,6 +34,7 @@ export default class ContainersExtension extends Extension {
     disable() {
         console.log("disabling containers extension");
         containersMenu.destroy();
+        containersMenu = null;
     }
 }
 
