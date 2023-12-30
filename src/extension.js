@@ -34,6 +34,7 @@ export default class ContainersExtension extends Extension {
     disable() {
         console.log("disabling containers extension");
         containersMenu.destroy();
+        containersMenu = null;
     }
 }
 
