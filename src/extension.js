@@ -65,10 +65,31 @@ class ContainersMenu extends PanelMenu.Button {
         this.menu.connect("open-state-changed", () => {
             if (this.menu.isOpen) {
                 this._renderMenu();
+                this._sync();
+            } else {
+                this._stop_sync();
             }
         });
 
         this._renderMenu();
+    }
+
+    async _sync() {
+        this.podmanListenCmd = await Podman.newEventsProcess((containerEvent) => {
+            console.debug("container event for container " + containerEvent.name)
+            this._renderMenu();
+        });
+    }
+
+    async _stop_sync() {
+        try {
+            const out = this.podmanListenCmd?.get_stdout_pipe();
+            await out.close_async(0, null, () => {});
+            await this.podmanListenCmd.force_exit();
+            console.debug("podman events process status " + this.podmanListenCmd.get_status());
+        } catch (e) {
+            console.error("cleaning up podman events subprocess failed" + e);
+        }
     }
 
     async _renderMenu() {
