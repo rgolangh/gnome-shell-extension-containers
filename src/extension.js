@@ -156,7 +156,7 @@ class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
         pauseBtn.toggle_mode = true;
         const deleteBtn = createActionButton(
             () => new RemoveContainerDialog(container).open(1, true),
-            "user-trash-symbolic.symbolic");
+            "user-trash-symbolic");
 
         switch (container.status.split(" ")[0]) {
             case "Exited":
