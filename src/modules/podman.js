@@ -271,3 +271,49 @@ function runCommandInTerminal(command, containerName, args, keepOpenOnExit) {
     }
 }
 
+export async function newEventsProcess(onEvent) {
+    try {
+        const cmdline = "podman events --filter type=container --format '{\"name\": \"{{ .Name }}\"}'";
+        const [, argv] = GLib.shell_parse_argv(cmdline);
+        const process = Gio.Subprocess.new(argv,
+            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
+
+        const pipe = process.get_stdout_pipe();
+        await _read(pipe, onEvent);
+        return process;
+
+    } catch (e) {
+        console.error(e.message);
+        throw new Error("Error occurred when fetching containers");
+    }
+}
+
+async function _read(inputStream, onEvent) {
+    const content = await inputStream.read_bytes_async(4096, GLib.PRIORITY_DEFAULT, null, (source, result) => {
+        const rawjson = new TextDecoder().decode(source.read_bytes_finish(result).toArray());
+        console.debug("raw json answer " + rawjson);
+        if (rawjson === "") {
+            // no output is EOF, no need to continue processing
+            return;
+        }
+        const rawjsonArray = rawjson.split(/\n/);
+        rawjsonArray.forEach( j =>  {
+            if (j !== "") {
+                try {
+                    const containerEvent = JSON.parse(j);
+                    console.debug("firing callback on container event " + containerEvent);
+                    onEvent(containerEvent);
+                } catch (e) {
+                    console.error("json parse error " + e);
+                }
+            }
+        });
+        if (!source.is_closed()) {
+            // keep reading
+            _read(source, onEvent);
+        } else {
+            return;
+        }
+    });
+}
+
