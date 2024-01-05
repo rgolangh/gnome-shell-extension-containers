@@ -271,7 +271,7 @@ function runCommandInTerminal(command, containerName, args, keepOpenOnExit) {
     }
 }
 
-export async function newEventsProcess(onEvent) {
+async function newEventsProcess(onEvent) {
     try {
         const cmdline = "podman events --filter type=container --format '{\"name\": \"{{ .Name }}\"}'";
         const [, argv] = GLib.shell_parse_argv(cmdline);
