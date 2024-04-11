@@ -4,6 +4,7 @@
   "url": "https://github.com/rgolangh/gnome-shell-extension-containers",
   "uuid": "containers@royg",
   "shell-version": [
-    "45"
+    "45",
+    "46"
   ]
 }
