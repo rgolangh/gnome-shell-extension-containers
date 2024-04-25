@@ -135,6 +135,9 @@ class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
 
     constructor(container) {
         super(container.name);
+        const label = new St.Label({text: `${container.image} - ${container.command}`});
+        label.add_style_class_name("container-name-label");
+        this.insert_child_at_index(label, 2);
         const actions = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, style_class: "container-action-bar"});
         this.menu.addMenuItem(actions);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -191,6 +194,12 @@ class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
         actions.actor.add_child(restartBtn);
         actions.actor.add_child(pauseBtn);
         actions.actor.add_child(deleteBtn);
+
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        const info = new PopupMenu.PopupMenuItem(`${container.details()}`);
+        info.add_style_class_name("container-info");
+        this.menu.addMenuItem(info);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         this.menu.addAction("Show Logs", () => container.logs());
         this.menu.addAction("Watch Top", () => container.watchTop());

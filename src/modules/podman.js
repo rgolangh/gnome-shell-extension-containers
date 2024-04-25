@@ -58,12 +58,15 @@ class Container {
         }
 
         this.image = jsonContainer.Image;
-        this.command = jsonContainer.Command;
+        this.command = jsonContainer.Cmd;
+        this.entrypoint = jsonContainer.Entrypoint;
         this.startedAt = new Date(jsonContainer.StartedAt * 1000);
-        if (jsonContainer.Ports === null) {
+        console.log("network setttings " + jsonContainer);
+        console.log("network setttings ports " + jsonContainer.Ports);
+        if (jsonContainer.NetworkSettings?.Ports === "") {
             this.ports = "n/a";
         } else {
-            this.ports = jsonContainer.Ports.map(e => `host ${e.hostPort}/${e.protocol} -> pod ${e.containerPort}`);
+            this.ports = jsonContainer.Ports?.map(e => `host ${e.host_ip}:${e.host_port}/${e.protocol} -> pod ${e.container_port}`);
         }
     }
 
@@ -129,11 +132,17 @@ class Container {
         const containerDetails = [
             `Status: ${this.status}`,
             `Image: ${this.image}`,
-            `Command: ${this.command}`,
             `Created: ${this.createdAt}`,
-            `Started: ${this.startedAt !== null ? this.startedAt : "never"}`,
-            `Ports: ${this.ports}`,
-        ];
+            `Started: ${this.startedAt !== null ? this.startedAt : "never"}`
+        ]
+        if (this.Command !== null) {
+            containerDetails.push(`Command: ${this.command}`);
+        }
+
+        if (this.entrypoint !== null) {
+            containerDetails.push(`Entrypoint: ${this.entrypoint}`);
+        }
+        containerDetails.push(`Ports: ${this.ports}`);
 
         // add more stats and info - inspect - SLOW
         this.inspect();

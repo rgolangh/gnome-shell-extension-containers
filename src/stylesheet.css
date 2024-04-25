@@ -1,21 +1,21 @@
 .containers-extension-menu {
-	width: 380px;
+    width: 380px;
 }
 
 .status-running {
-	color: lawngreen;
+    color: lawngreen;
 }
 
 .status-stopped {
-	color: red;
+    color: red;
 }
 
 .status-remove {
-	color: LightSlateGray;
+    color: LightSlateGray;
 }
 
 .status-undefined {
-	color: SkyBlue;
+    color: SkyBlue;
 }
 
 .containers-extension-menu .button:checked {
@@ -35,5 +35,21 @@
 .container-action-bar {
     background-color: inherit;
     margin-right: 40px;
-	margin-left: 12px;
+    margin-left: 12px;
+}
+
+.container-name-label {
+    position: relative;
+    vertical-align: text-bottom;
+    margin-top: 5px;
+    font-size: 9px;
+    font-variant: small-caps;
+    font-style: italic;
+    font-family: monospace;
+}
+
+.container-info {
+    font-size: 10px;
+    font-variant: small-caps;
+    font-family: monospace;
 }
