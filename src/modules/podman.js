@@ -61,9 +61,7 @@ class Container {
         this.command = jsonContainer.Cmd;
         this.entrypoint = jsonContainer.Entrypoint;
         this.startedAt = new Date(jsonContainer.StartedAt * 1000);
-        console.log("network setttings " + jsonContainer);
-        console.log("network setttings ports " + jsonContainer.Ports);
-        if (jsonContainer.NetworkSettings?.Ports === "") {
+        if (jsonContainer.Ports === "") {
             this.ports = "n/a";
         } else {
             this.ports = jsonContainer.Ports?.map(e => `host ${e.host_ip}:${e.host_port}/${e.protocol} -> pod ${e.container_port}`);
