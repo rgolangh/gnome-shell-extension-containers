@@ -27,6 +27,20 @@
     box-shadow: none;
 }
 
+.containers-extension-menu .container-menu-item {
+    border-width: 1px;
+    border-top: none;
+    border-bottom: none;
+    border-color: gray;
+    border-radius: 15px;
+}
+
+.containers-extension-menu .container-menu-item:last-of-type {
+    border-radius: 15px;
+    border-bottom: 1px;
+    border-top: none;
+}
+
 .containers-action-button {
     padding-right: 6px;
     padding-left: 6px;
