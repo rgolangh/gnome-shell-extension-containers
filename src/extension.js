@@ -123,11 +123,12 @@ class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
     constructor(container, settings) {
         super(container.name);
         this.menu.box.add_style_class_name("container-menu-item");
-        const label = new St.Label({text: `${container.image} - ${container.command}`});
+        const label = new St.Label({text: container.image});
         label.add_style_class_name("container-name-label");
-        this.insert_child_at_index(label, 2);
         const actions = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, style_class: "container-action-bar"});
-        this.menu.addMenuItem(actions);
+        actions.actor.set_x_expand(true);
+        actions.actor.set_x_align(Clutter.ActorAlign.END);
+        //this.insert_child_at_index(actions, 2);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         const startBtn = createActionButton(() => container.start(), "media-playback-start-symbolic");
@@ -156,17 +157,19 @@ class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
             case "created":
             case "configured":
             case "stopped": {
-                actions.actor.add_child(startBtn);
                 pauseBtn.reactive = false;
                 this.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
+                // the element on index 3 is the expander, a spacer that clutter fills with space
+                this.insert_child_at_index(startBtn, 4);
                 break;
             }
             case "Up":
             case "running": {
-                actions.actor.add_child(stopBtn);
                 deleteBtn.reactive = false;
                 pauseBtn.checked = false;
                 this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
+                // the element on index 3 is the expander, a spacer that clutter fills with space
+                this.insert_child_at_index(stopBtn, 4);
                 break;
             }
             case "Paused":
@@ -179,10 +182,10 @@ class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
                 this.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
                 break;
         }
-        actions.actor.add_child(restartBtn);
-        actions.actor.add_child(pauseBtn);
-        actions.actor.add_child(deleteBtn);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        // the element on index 3 is the expander, a spacer that clutter fills with space
+        this.insert_child_at_index(restartBtn, 4);
+        this.insert_child_at_index(pauseBtn, 4);
+        this.insert_child_at_index(deleteBtn, 4);
 
         if (settings.extraInfo) {
             const info = new PopupMenu.PopupMenuItem(`${container.details()}`);
@@ -196,6 +199,8 @@ class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
         this.menu.addAction("Open Shell", () => container.shell());
         this.menu.addAction("Watch Statistics", () => container.stats());
         this.menu.addAction("Copy Container Details", () => setClipboard(container.details()));
+        // the css nth- or last-of-type is probably not implemented in gjs
+        this.menu.box.get_children().at(-1).add_style_class_name("last-container-menu-item");  
     }
 }
 
@@ -217,8 +222,6 @@ function createActionButton(command, iconName) {
     const btn = new St.Button({
         track_hover: true,
         style_class: "containers-action-button button",
-        x_expand: true,
-        x_align: Clutter.ActorAlign.CENTER,
     });
     btn.child = new St.Icon({
         icon_name: iconName,

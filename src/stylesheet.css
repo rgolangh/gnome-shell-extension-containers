@@ -1,5 +1,5 @@
 .containers-extension-menu {
-    width: 380px;
+    width: 480px;
 }
 
 .status-running {
@@ -27,29 +27,27 @@
     box-shadow: none;
 }
 
-.containers-extension-menu .container-menu-item {
-    border-width: 1px;
-    border-top: none;
-    border-bottom: none;
-    border-color: gray;
-    border-radius: 15px;
+.container-menu-item .popup-menu-item {
+    animation: ease-in;
 }
 
-.containers-extension-menu .container-menu-item:last-of-type {
-    border-radius: 15px;
-    border-bottom: 1px;
-    border-top: none;
+.container-menu-item .popup-separator-menu-item {
+    margin-right: 0px;
 }
 
 .containers-action-button {
-    padding-right: 6px;
-    padding-left: 6px;
+    width: 20px;
+    /*border-radius: 10px; */
+    border: none;
+    background: inherit;
+    padding: 0px;
 }
 
+.containers-action-button .popup-menu-icon {
+    width: 12px;
+}
 .container-action-bar {
-    background-color: inherit;
-    margin-right: 40px;
-    margin-left: 12px;
+    background-color: red;
 }
 
 .container-name-label {
