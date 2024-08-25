@@ -1,0 +1,19 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*"
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo ${{ env.GITHUB_REF }}
+          make build
+          # rename .zip  containers@royg.shell-extension.zip
+          ls -la
+          # gh release create ${{ env.GITHUB_REF }} --genereate-notes
+          
