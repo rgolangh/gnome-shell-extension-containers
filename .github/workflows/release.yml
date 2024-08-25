@@ -21,4 +21,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create ${GITHUB_REF#refs/tags/} --genereate-notes
+          gh release create ${GITHUB_REF#refs/tags/} --generate-notes
