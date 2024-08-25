@@ -14,15 +14,11 @@ jobs:
           sudo apt-get install -y gnome-shell
       - uses: actions/checkout@v4 
       - name: build
+        run: |
+          make build
+        
+      - name: publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo ${{ env.GITHUB_REF }}
-          make build
-          # rename .zip  containers@royg.shell-extension.zip
-
-        
-      - name: publish release
-        run: |
-          ls -la
-          # gh release create ${{ env.GITHUB_REF }} --genereate-notes
+          gh release create ${GITHUB_REF#refs/tags/} --genereate-notes
