@@ -8,13 +8,21 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - name: install gnome-extensions
+        run: |
+          apt-get update
+          apt-get install -y gnome-shell
       - uses: actions/checkout@v4 
-      - env:
+      - name: build
+        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo ${{ env.GITHUB_REF }}
           make build
           # rename .zip  containers@royg.shell-extension.zip
+
+        
+      - name: publish release
+        run: |
           ls -la
           # gh release create ${{ env.GITHUB_REF }} --genereate-notes
-          
