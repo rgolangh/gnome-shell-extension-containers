@@ -10,8 +10,8 @@ jobs:
     steps:
       - name: install gnome-extensions
         run: |
-          apt-get update
-          apt-get install -y gnome-shell
+          sudo apt-get update
+          sudo apt-get install -y gnome-shell
       - uses: actions/checkout@v4 
       - name: build
         env:
