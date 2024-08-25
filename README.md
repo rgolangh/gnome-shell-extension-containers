@@ -1,46 +1,70 @@
-# gnome-shell-extension-containers
+![Project Icon](src/podman-icon.png)
+# GNOME Shell Extension: Containers
 
-**Containers** is a gnome-shell extension to manage linux container with [podman](https://podman.io/)
+**Manage Linux containers seamlessly using Podman within the GNOME Shell.**
+  
+![GitHub stars](https://img.shields.io/github/stars/rgolangh/gnome-shell-extension-containers)  
+![GitHub issues](https://img.shields.io/github/issues/rgolangh/gnome-shell-extension-containers)
 
-Supported actions:
-- start
-- stop 
-- remove
-- pause
-- restart
-- top resources
-- shell - opens a shell in a new termainl
-- stats - open statistics in a new terminal, updating live
-- logs  - following logs in a new termianl
-- view and copy most of the `inspect` info
+## Features ✨
 
-# Install using your browser 
+This extension provides a convenient GNOME Shell menu to manage your Podman containers. Supported actions include:
 
-See the [gnome extensions page](https://extensions.gnome.org/extension/1500/containers/)  
+- **Start**: Initialize containers. 🚀
+- **Stop**: Terminate running containers. 🛑
+- **Remove**: Delete containers. 🗑️
+- **Pause**: Suspend container processes. ⏸️
+- **Restart**: Reboot containers. 🔄
+- **Top Resources**: Display resource usage stats. 📊
+- **Shell Access**: Open a terminal shell in the container. 🔧
+- **Live Stats**: View real-time statistics in a new terminal. 📈
+- **Logs Monitoring**: Follow logs in a new terminal session. 📋
+- **Inspect Info**: View and copy detailed inspection information. 🔍
 
-# Install from source
+## Installation 🛠️
 
-Checkout `main` branch for latest Gnome Shell version available.
-For older Gnome Shell versions see `gnome-shell-x.xx` branches per version.
+### From GNOME Extensions Page 🌐
+You can install this extension directly from the [GNOME Extensions page](https://extensions.gnome.org/extension/1500/containers/).
 
-Clone, Pack, and Install
+### From Source 📂
 
-```console
-$ git clone https://github.com/rgolangh/gnome-shell-extension-containers
-$ make all
-```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/rgolangh/gnome-shell-extension-containers
+   cd gnome-shell-extension-containers
+   ```
+   
+2. Build and install:
 
-Enalble using `make enable` or using 'Tweaks' -> Extensions -> toggle 'Containers'
+  ```bash
+  make all
+  ```
 
-<p>
-  <img src="screenshot.png" width="350" title="gnome-shell-extension-containers">
-</p>
+3. Enable the extension:
 
-# Developing / Hacking
+  ```bash
+  make enable
+  ```
 
-Clone and make your changes, and then use this to spin an inline gnome-shell in a dedicated window (works with your system dbus):
-```
-make debug
-```
+Alternatively, enable it via Extensions -> Toggle 'Containers'.
 
+## Development / Contributing 🤝
 
+To contribute to the development of this extension:
+
+Clone the repository and make your changes.
+Debugging: Spin up an inline GNOME Shell session in a dedicated window:
+  
+  ```bash
+  make debug
+  ```
+
+Contributions are welcome! Please ensure your code follows the project’s style guidelines and is thoroughly tested before submitting a pull request.
+
+## Screenshot 📸
+
+![Project Icon](screenshot.png)
+
+## License 📜
+
+Apache-2.0 License
