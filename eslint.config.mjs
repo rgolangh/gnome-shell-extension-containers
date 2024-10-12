@@ -23,8 +23,7 @@ export default [
                 globalThis: "readonly",
                 imports: "readonly",
                 Intl: "readonly",
-                log: "readonly",
-                logError: "readonly",
+                console: "readonly",
                 print: "readonly",
                 printerr: "readonly",
                 window: "readonly",
@@ -43,6 +42,7 @@ export default [
         },
 
         rules: {
+            "no-console": "off",
             "array-bracket-newline": ["error", "consistent"],
             "array-bracket-spacing": ["error", "never"],
             "array-callback-return": "error",
@@ -82,10 +82,7 @@ export default [
             }],
 
             indent: ["error", 4, {
-                ignoredNodes: [
-                    "CallExpression[callee.object.name=GObject][callee.property.name=registerClass] > ClassExpression:first-child",
-                ],
-
+                SwitchCase: 1,
                 MemberExpression: "off",
             }],
 

@@ -1,8 +1,8 @@
 "use strict";
 
-import Gio from 'gi://Gio';
-import GLib from 'gi://GLib';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import Gio from "gi://Gio";
+import GLib from "gi://GLib";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 const TERM_KEEP_ON_EXIT = true;
 const TERM_CLOSE_ON_EXIT = false;
@@ -12,9 +12,11 @@ Gio._promisify(Gio.Subprocess.prototype,
 
 let podmanVersion;
 
-/** @returns {Container[]} list of containers as reported by podman */
-// eslint-disable-next-line no-unused-vars
-// @param {gio.settigs} settings
+/**
+ * Get a list of containers
+ * @param {Gio.settings} settings - The extension settings
+ * @returns {Container[]} list of containers as reported by podman
+ */
 export async function getContainers(settings) {
     if (podmanVersion === undefined) {
         await discoverPodmanVersion();
@@ -134,8 +136,8 @@ class Container {
             `Status: ${this.status}`,
             `Image: ${this.image}`,
             `Created: ${this.createdAt}`,
-            `Started: ${this.startedAt !== null ? this.startedAt : "never"}`
-        ]
+            `Started: ${this.startedAt !== null ? this.startedAt : "never"}`,
+        ];
         if (this.Command !== null) {
             containerDetails.push(`Command: ${this.command}`);
         }
@@ -152,8 +154,9 @@ class Container {
     }
 }
 
-/** discoverPodmanVersion fetches the podman version from cli */
-// eslint-disable-next-line no-unused-vars
+/**
+ * discoverPodmanVersion fetches the podman version from cli
+ */
 async function discoverPodmanVersion() {
     let versionJson;
 
@@ -276,54 +279,59 @@ function runCommandInTerminal(terminal, command, containerName, args, keepOpenOn
         GLib.spawn_command_line_async(cmdline);
         console.debug(`command on ${containerName} terminated successfully`);
     } catch (e) {
-        const errMsg = `Error occurred when running ${command} on container ${containerName}`;
+        const errMsg = `Error occurred when running ${command} on container ${containerName}.\nError: ${e}`;
         Main.notify(errMsg);
         console.error(errMsg);
     }
 }
 
+/**
+ * start listening to podman events in a separate process, each event is a line read.
+ * @param {Function} onEvent - run onEvent function on every line read
+ * @returns {Gio.Subprocess} process - The process handle
+ */
 export async function newEventsProcess(onEvent) {
     try {
         const cmdline = "podman events --filter type=container --format '{\"name\": \"{{ .Name }}\"}'";
         const [, argv] = GLib.shell_parse_argv(cmdline);
-        const process = Gio.Subprocess.new(argv,
-            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-
+        const process = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
         const pipe = process.get_stdout_pipe();
         await _read(pipe, onEvent);
         return process;
-
     } catch (e) {
         console.error(e.message);
         throw new Error("Error occurred when fetching containers");
     }
 }
 
+/**
+ * Read the input straem as a json a apply the onEvent function on it
+ * @param {Gio.inputStream} inputStream - Input stream of an array of json messages, where each entry is a single event on a container. See "man podman-events".
+ * @param {Function} onEvent - Function to apply on each container event
+ */
 async function _read(inputStream, onEvent) {
-    const content = await inputStream.read_bytes_async(4096, GLib.PRIORITY_DEFAULT, null, (source, result) => {
+    await inputStream.read_bytes_async(4096, GLib.PRIORITY_DEFAULT, null, (source, result) => {
         const rawjson = new TextDecoder().decode(source.read_bytes_finish(result).toArray());
-        console.debug("raw json answer " + rawjson);
+        console.debug(`raw json answer: ${rawjson}`);
         if (rawjson === "") {
             // no output is EOF, no need to continue processing
             return;
         }
         const rawjsonArray = rawjson.split(/\n/);
-        rawjsonArray.forEach( j =>  {
+        rawjsonArray.forEach(j => {
             if (j !== "") {
                 try {
                     const containerEvent = JSON.parse(j);
-                    console.debug("firing callback on container event " + containerEvent);
+                    console.debug(`firing callback on container event ${containerEvent}`);
                     onEvent(containerEvent);
                 } catch (e) {
-                    console.error("json parse error " + e);
+                    console.error(`json parse error ${e}`);
                 }
             }
         });
         if (!source.is_closed()) {
             // keep reading
             _read(source, onEvent);
-        } else {
-            return;
         }
     });
 }

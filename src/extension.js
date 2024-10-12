@@ -1,24 +1,23 @@
 "use strict";
 
-import Clutter from 'gi://Clutter';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import St from 'gi://St';
-import Gio from 'gi://Gio';
-import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
-import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
-import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
-import GObject from 'gi://GObject';
+import Clutter from "gi://Clutter";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import St from "gi://St";
+import Gio from "gi://Gio";
+import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
+import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
+import * as Dialog from "resource:///org/gnome/shell/ui/dialog.js";
+import * as ModalDialog from "resource:///org/gnome/shell/ui/modalDialog.js";
+import GObject from "gi://GObject";
 
-import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 
-import * as Podman from './modules/podman.js';
+import * as Podman from "./modules/podman.js";
 
 export default class ContainersExtension extends Extension {
     /**
      * enable is the entry point called by gnome-shell
      */
-    // eslint-disable-next-line no-unused-vars
     enable() {
         console.log(`enabling ${this.uuid} extension`);
         this._indicator = new PanelMenu.Button(0.0, this.metadata.name, false);
@@ -49,7 +48,6 @@ export default class ContainersExtension extends Extension {
     /**
      * disable is called when the main extension menu is closed
      */
-    // eslint-disable-next-line no-unused-vars
     disable() {
         console.log("disabling containers extension");
         this._indicator?.destroy();
@@ -58,8 +56,8 @@ export default class ContainersExtension extends Extension {
     }
 
     async _sync() {
-        this.podmanListenCmd = await Podman.newEventsProcess((containerEvent) => {
-            console.debug("container event for container " + containerEvent.name)
+        this.podmanListenCmd = await Podman.newEventsProcess(containerEvent => {
+            console.debug(`container event for container ${containerEvent.name}`);
             this._renderMenu();
         });
     }
@@ -69,9 +67,9 @@ export default class ContainersExtension extends Extension {
             const out = this.podmanListenCmd?.get_stdout_pipe();
             await out.close_async(0, null, () => {});
             await this.podmanListenCmd.force_exit();
-            console.debug("podman events process status " + this.podmanListenCmd.get_status());
+            console.debug(`podman events process status ${this.podmanListenCmd.get_status()}`);
         } catch (e) {
-            console.error("cleaning up podman events subprocess failed" + e);
+            console.error(`cleaning up podman events subprocess failed ${e}`);
         }
     }
 
@@ -101,7 +99,7 @@ export default class ContainersExtension extends Extension {
             if (containers.length > 0) {
                 containers.forEach(container => {
                     console.debug(container.toString());
-                    this.menu.addMenuItem(new ContainerSubMenuItem(container, { extraInfo: this._settings.get_boolean("extra-info")}));
+                    this.menu.addMenuItem(new ContainerSubMenuItem(container, {extraInfo: this._settings.get_boolean("extra-info")}));
                 });
             } else {
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem("No containers detected"));
@@ -128,7 +126,7 @@ class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
         const actions = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, style_class: "container-action-bar"});
         actions.actor.set_x_expand(true);
         actions.actor.set_x_align(Clutter.ActorAlign.END);
-        //this.insert_child_at_index(actions, 2);
+        // this.insert_child_at_index(actions, 2);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
         const startBtn = createActionButton(() => container.start(), "media-playback-start-symbolic");
@@ -200,7 +198,7 @@ class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
         this.menu.addAction("Watch Statistics", () => container.stats());
         this.menu.addAction("Copy Container Details", () => setClipboard(container.details()));
         // the css nth- or last-of-type is probably not implemented in gjs
-        this.menu.box.get_children().at(-1).add_style_class_name("last-container-menu-item");  
+        this.menu.box.get_children().at(-1).add_style_class_name("last-container-menu-item");
     }
 }
 
