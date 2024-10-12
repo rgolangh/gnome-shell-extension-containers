@@ -77,7 +77,7 @@ export default class ContainersExtension extends Extension {
 
     async _renderMenu() {
         try {
-            const containers = await Podman.getContainers();
+            const containers = await Podman.getContainers(this._settings);
             console.debug(`found ${containers.length} containers`);
 
             this.menu.removeAll();
