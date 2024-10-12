@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "description": "this package.json is solely to run eslint",
   "scripts": {
-    "lint": "eslint *.js modules/*.js"
+    "lint": "eslint src/*.js src/modules/*.js"
   },
   "devDependencies": {
-    "eslint": "^8.39.0",
-    "eslint-plugin-jsdoc": "^43.3.1"
+    "eslint": "^9.0.0",
+    "eslint-plugin-jsdoc": "^50.3.2"
   }
 }
