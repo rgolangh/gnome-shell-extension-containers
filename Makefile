@@ -5,7 +5,7 @@ EXTRA_SOURCES = \
 	--extra-source=classic.css \
 	--extra-source=modules
 
-build: lint
+build:
 	gnome-extensions pack -f $(EXTRA_SOURCES) src/
 	mv containers@royg.shell-extension.zip $(TARGET_FILE)
 
