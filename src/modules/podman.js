@@ -279,9 +279,9 @@ function runCommandInTerminal(terminal, command, containerName, args, keepOpenOn
         GLib.spawn_command_line_async(cmdline);
         console.debug(`command on ${containerName} terminated successfully`);
     } catch (e) {
-        const errMsg = `Error occurred when running ${command} on container ${containerName}.\nError: ${e}`;
-        Main.notify(errMsg);
-        console.error(errMsg);
+        const errMsg = `Error occurred when running ${command} on container ${containerName}`;
+        Main.notify(errMsg, e.message);
+        console.error(`${errMsg}: ${e.message}`);
     }
 }
 
