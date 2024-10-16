@@ -4,10 +4,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: '18'
-    - run: npm init @eslint/config 
-    - run: npm install eslint-plugin-jsdoc@latest --save-dev
-    - run: npx eslint *.js modules/*.js
+    - run: npm install
+    - run: npm run lint

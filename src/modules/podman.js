@@ -1,8 +1,8 @@
 "use strict";
 
-import Gio from 'gi://Gio';
-import GLib from 'gi://GLib';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import Gio from "gi://Gio";
+import GLib from "gi://GLib";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 const TERM_KEEP_ON_EXIT = true;
 const TERM_CLOSE_ON_EXIT = false;
@@ -12,9 +12,12 @@ Gio._promisify(Gio.Subprocess.prototype,
 
 let podmanVersion;
 
-/** @returns {Container[]} list of containers as reported by podman */
-// eslint-disable-next-line no-unused-vars
-export async function getContainers() {
+/**
+ * Get a list of containers
+ * @param {Gio.settings} settings - The extension settings
+ * @returns {Container[]} list of containers as reported by podman
+ */
+export async function getContainers(settings) {
     if (podmanVersion === undefined) {
         await discoverPodmanVersion();
     }
@@ -35,14 +38,16 @@ export async function getContainers() {
 
     const containers = [];
     jsonContainers.forEach(e => {
-        let c = new Container(e);
+        let c = new Container(settings, e);
         containers.push(c);
     });
     return containers;
 }
 
 class Container {
-    constructor(jsonContainer) {
+    // settings: the extension's Gio.settings
+    constructor(settings, jsonContainer) {
+        this.terminal = settings.get_string("terminal");
         if (podmanVersion.newerOrEqualTo("2.0.3")) {
             this.name = jsonContainer.Names[0];
             this.id = jsonContainer.Id;
@@ -94,19 +99,19 @@ class Container {
 
     logs() {
         console.debug(`this state ${this.state} and is this === running ${this.state === "running"}`);
-        runCommandInTerminal("podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT : TERM_KEEP_ON_EXIT);
+        runCommandInTerminal(this.terminal, "podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT : TERM_KEEP_ON_EXIT);
     }
 
     watchTop() {
-        runCommandInTerminal("watch podman top", this.name, "");
+        runCommandInTerminal(this.terminal, "watch podman top", this.name, "");
     }
 
     shell() {
-        runCommandInTerminal("podman exec -it", this.name, "/bin/sh");
+        runCommandInTerminal(this.terminal, "podman exec -it", this.name, "/bin/sh");
     }
 
     stats() {
-        runCommandInTerminal("podman stats", this.name, "");
+        runCommandInTerminal(this.terminal, "podman stats", this.name, "");
     }
 
     async inspect() {
@@ -131,8 +136,8 @@ class Container {
             `Status: ${this.status}`,
             `Image: ${this.image}`,
             `Created: ${this.createdAt}`,
-            `Started: ${this.startedAt !== null ? this.startedAt : "never"}`
-        ]
+            `Started: ${this.startedAt !== null ? this.startedAt : "never"}`,
+        ];
         if (this.Command !== null) {
             containerDetails.push(`Command: ${this.command}`);
         }
@@ -149,8 +154,9 @@ class Container {
     }
 }
 
-/** discoverPodmanVersion fetches the podman version from cli */
-// eslint-disable-next-line no-unused-vars
+/**
+ * discoverPodmanVersion fetches the podman version from cli
+ */
 async function discoverPodmanVersion() {
     let versionJson;
 
@@ -209,8 +215,8 @@ class Version {
 
 /**
  * spawnCommandline runs a shell command and returns its output
- * @param {string} cmdline - the command line to spawn
- * @returns {string} - the command output
+ * @param {string} cmdline the command line to spawn
+ * @returns {string}       the command output
  * @throws
  */
 export async function spawnCommandline(cmdline) {
@@ -228,9 +234,9 @@ export async function spawnCommandline(cmdline) {
 
 /**
  * runCommand runs a podman container command using the cli
- * @param {string} command the command verb
+ * @param {string} command       the command verb
  * @param {string} containerName is the contaier name
- * @returns {string} command output
+ * @returns {string} command     output
  */
 async function runCommand(command, containerName) {
     const cmdline = `podman ${command} ${containerName}`;
@@ -253,19 +259,20 @@ async function runCommand(command, containerName) {
  * runCommandInTerminal runs a podman container command using the cli
  * and in gnome-terminal(unconfigurable atm) visible to users to present output.
  * Useful for logs, top, and stats container-commands.
- * @param {string} command {string} the command verb
- * @param {string} containerName {string} is the contaier name
- * @param {...string} args to pass to the invocation
+ * @param {string} terminal        the terminal program plus extra args if needed to execute in
+ * @param {string} command         the podman verb
+ * @param {string} containerName   is the container name
+ * @param {string[]} args          extra args to pass to the podman invocation
  * @param {boolean} keepOpenOnExit true means keep the terminal open when the command terminates
- * and/or when the output stream is closed. False means that if the logs can't be followed the terminal
- * just exits. For commands that are streaming like 'stats' this doesn't have and effect.
+ *      and/or when the output stream is closed. False means that if the logs can't be followed the terminal
+ *      just exits. For commands that are streaming like 'stats' this doesn't have an effect.
  */
-function runCommandInTerminal(command, containerName, args, keepOpenOnExit) {
+function runCommandInTerminal(terminal, command, containerName, args, keepOpenOnExit) {
     let cmdline;
     if (keepOpenOnExit) {
-        cmdline = `gnome-terminal -- bash -c '${command} ${containerName} ${args};read i'`;
+        cmdline = `${terminal} bash -c '${command} ${containerName} ${args};read i'`;
     } else {
-        cmdline = `gnome-terminal -- ${command} ${containerName} ${args}`;
+        cmdline = `${terminal} ${command} ${containerName} ${args}`;
     }
     console.debug(`running command ${cmdline}`);
     try {
@@ -273,53 +280,58 @@ function runCommandInTerminal(command, containerName, args, keepOpenOnExit) {
         console.debug(`command on ${containerName} terminated successfully`);
     } catch (e) {
         const errMsg = `Error occurred when running ${command} on container ${containerName}`;
-        Main.notify(errMsg);
-        console.error(errMsg);
+        Main.notify(errMsg, e.message);
+        console.error(`${errMsg}: ${e.message}`);
     }
 }
 
+/**
+ * start listening to podman events in a separate process, each event is a line read.
+ * @param {Function} onEvent - run onEvent function on every line read
+ * @returns {Gio.Subprocess} process - The process handle
+ */
 export async function newEventsProcess(onEvent) {
     try {
         const cmdline = "podman events --filter type=container --format '{\"name\": \"{{ .Name }}\"}'";
         const [, argv] = GLib.shell_parse_argv(cmdline);
-        const process = Gio.Subprocess.new(argv,
-            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-
+        const process = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
         const pipe = process.get_stdout_pipe();
         await _read(pipe, onEvent);
         return process;
-
     } catch (e) {
         console.error(e.message);
         throw new Error("Error occurred when fetching containers");
     }
 }
 
+/**
+ * Read the input straem as a json a apply the onEvent function on it
+ * @param {Gio.inputStream} inputStream - Input stream of an array of json messages, where each entry is a single event on a container. See "man podman-events".
+ * @param {Function} onEvent - Function to apply on each container event
+ */
 async function _read(inputStream, onEvent) {
-    const content = await inputStream.read_bytes_async(4096, GLib.PRIORITY_DEFAULT, null, (source, result) => {
+    await inputStream.read_bytes_async(4096, GLib.PRIORITY_DEFAULT, null, (source, result) => {
         const rawjson = new TextDecoder().decode(source.read_bytes_finish(result).toArray());
-        console.debug("raw json answer " + rawjson);
+        console.debug(`raw json answer: ${rawjson}`);
         if (rawjson === "") {
             // no output is EOF, no need to continue processing
             return;
         }
         const rawjsonArray = rawjson.split(/\n/);
-        rawjsonArray.forEach( j =>  {
+        rawjsonArray.forEach(j => {
             if (j !== "") {
                 try {
                     const containerEvent = JSON.parse(j);
-                    console.debug("firing callback on container event " + containerEvent);
+                    console.debug(`firing callback on container event ${containerEvent}`);
                     onEvent(containerEvent);
                 } catch (e) {
-                    console.error("json parse error " + e);
+                    console.error(`json parse error ${e}`);
                 }
             }
         });
         if (!source.is_closed()) {
             // keep reading
             _read(source, onEvent);
-        } else {
-            return;
         }
     });
 }

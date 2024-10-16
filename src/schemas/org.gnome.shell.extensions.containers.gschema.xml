@@ -4,5 +4,9 @@
     <key name="extra-info" type="b">
       <default>true</default>
     </key>
-  </schema>
+    <key name="terminal" type="s">
+      <default>"gnome-terminal --"</default>
+      <description>The terminal program and arguments to use for running commands such as shell, logs, stats, and watch</description>
+   </key>
+ </schema>
 </schemalist>

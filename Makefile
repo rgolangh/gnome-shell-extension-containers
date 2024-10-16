@@ -5,7 +5,7 @@ EXTRA_SOURCES = \
 	--extra-source=classic.css \
 	--extra-source=modules
 
-build:
+build: lint
 	gnome-extensions pack -f $(EXTRA_SOURCES) src/
 	mv containers@royg.shell-extension.zip $(TARGET_FILE)
 
@@ -18,9 +18,12 @@ enable:
 debug:
 	G_MESSAGES_DEBUG="GNOME Shell" dbus-run-session -- gnome-shell --nested --wayland
 
+lint:
+	npm run lint
+
 all: \
 	install \
 	enable
 
-.PHONY: build debug enable install all
+.PHONY: build debug enable install all lint
 
