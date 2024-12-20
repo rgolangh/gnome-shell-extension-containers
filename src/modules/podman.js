@@ -25,7 +25,8 @@ export async function getContainers(settings) {
     let jsonContainers;
 
     try {
-        const out = await spawnCommandline("podman ps -a --format json");
+        const sortBy = settings.get_string("pod-list-sort-by");
+        const out = await spawnCommandline(`podman ps -a --sort ${sortBy} --format json`);
         jsonContainers = JSON.parse(out);
     } catch (e) {
         console.error(e.message);
