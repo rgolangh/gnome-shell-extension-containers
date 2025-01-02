@@ -1,7 +1,7 @@
 ![Project Icon](src/podman-icon.png)
 # GNOME Shell Extension: Containers
 
-**Manage Linux containers seamlessly using Podman within the GNOME Shell.**
+**Manage Podman containers seamlessly within GNOME Shell.**
   
 ![GitHub stars](https://img.shields.io/github/stars/rgolangh/gnome-shell-extension-containers)  
 ![GitHub issues](https://img.shields.io/github/issues/rgolangh/gnome-shell-extension-containers)
@@ -66,6 +66,17 @@ Alternatively, enable it via Extensions -> Toggle 'Containers'.
 
   Note: The value for __*terminal*__ may not work for you. Please report any working value you have so in time we would have a proper list.
   There is a system wide gsettings `org.gnome.desktop.default-applications.terminal exec` but depending on the value different args are needed, as seen from above.
+
+- __*pod-list-sort-by*__
+  Sort the pod list by one of the builtin fields:
+    - command
+    - created
+    - id
+    - image
+    - names
+    - runningfor
+    - size
+    - status
 
 ## Development / Contributing 🤝
 
