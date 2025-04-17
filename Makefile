@@ -1,11 +1,19 @@
-VERSION ?= $(shell git describe --tags --always)
+VERSION ?= 1.2.2
+#VERSION ?= $(shell git describe --tags --always)
 TARGET_FILE := containers@royg.shell-extension_$(VERSION).zip
 EXTRA_SOURCES = \
 	--extra-source=podman-icon.png \
 	--extra-source=classic.css \
 	--extra-source=modules
 
-build:
+tarbal:
+	tar -czvf gnome-shell-extension-containers-$(VERSION).tar.gz --transform=s/src/gnome-shell-extension-containers-$(VERSION)/ src/*
+
+rpm: tarbal
+	mkdir -m 777 $(shell pwd)/rpms || true
+	podman build -v $(shell pwd)/rpms:/rpms:Z .
+
+build: tarbal
 	gnome-extensions pack -f $(EXTRA_SOURCES) src/
 	mv containers@royg.shell-extension.zip $(TARGET_FILE)
 
@@ -25,5 +33,5 @@ all: \
 	install \
 	enable
 
-.PHONY: build debug enable install all lint
+.PHONY: tarbal build debug enable install all lint
 
