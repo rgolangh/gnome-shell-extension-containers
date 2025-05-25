@@ -4,30 +4,31 @@ import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
+import * as PodmanApi from "./podman-socket-api.js";
+
 const TERM_KEEP_ON_EXIT = true;
 const TERM_CLOSE_ON_EXIT = false;
 
 Gio._promisify(Gio.Subprocess.prototype,
     "communicate_utf8_async", "communicate_utf8_finish");
 
-let podmanVersion;
+export var podmanVersion;
 
+export async function init() {
+    if (podmanVersion === undefined) {
+        await discoverPodmanVersion();
+    }
+}
 /**
  * Get a list of containers
  * @param {Gio.settings} settings - The extension settings
  * @returns {Container[]} list of containers as reported by podman
  */
 export async function getContainers(settings) {
-    if (podmanVersion === undefined) {
-        await discoverPodmanVersion();
-    }
 
     let jsonContainers;
-
     try {
-        const sortBy = settings.get_string("pod-list-sort-by");
-        const out = await spawnCommandline(`podman ps -a --sort ${sortBy} --format json`);
-        jsonContainers = JSON.parse(out);
+        jsonContainers = await PodmanApi.request(`containers/json?all=true`);
     } catch (e) {
         console.error(e.message);
         throw new Error("Error occurred when fetching containers");
@@ -39,7 +40,8 @@ export async function getContainers(settings) {
 
     const containers = [];
     jsonContainers.forEach(e => {
-        let c = new Container(settings, e);
+        console.debug(e);
+        let c = new Container(e, settings);
         containers.push(c);
     });
     return containers;
@@ -47,14 +49,26 @@ export async function getContainers(settings) {
 
 class Container {
     // settings: the extension's Gio.settings
-    constructor(settings, jsonContainer) {
+    constructor(jsonContainer, settings) {
+        console.debug(`###@@@@##@@ JSON container -  ${jsonContainer}`);
         this.terminal = settings.get_string("terminal");
-        if (podmanVersion.newerOrEqualTo("2.0.3")) {
-            this.name = jsonContainer.Names[0];
+        if (podmanVersion.newerOrEqualTo("5.0.0")) {
+            Object.assign(this, jsonContainer);
+        } else if (podmanVersion.newerOrEqualTo("2.0.3")) {
+            this.name = jsonContainer.Names[0].replace(/^\//, '');
             this.id = jsonContainer.Id;
             this.state = jsonContainer.State;
-            this.status = jsonContainer.State;
-            this.createdAt = jsonContainer.CreatedAt;
+            this.status = jsonContainer.Status;
+            this.createdAt = new Date(jsonContainer.Created * 1000);
+            this.lables = jsonContainer.Labels
+            this.image = jsonContainer.Image;
+            this.command = jsonContainer.Command;
+            this.entrypoint = jsonContainer.Entrypoint;
+            if (jsonContainer.Ports === "") {
+                this.ports = "n/a";
+            } else {
+                this.ports = jsonContainer.Ports?.map(e => `host ${e.host_ip}:${e.host_port}/${e.protocol} -> pod ${e.container_port}`);
+            }
         } else {
             this.name = jsonContainer.Names;
             this.id = jsonContainer.ID;
@@ -63,81 +77,74 @@ class Container {
             this.createdAt = jsonContainer.Created;
         }
 
-        this.image = jsonContainer.Image;
-        this.command = jsonContainer.Cmd;
-        this.entrypoint = jsonContainer.Entrypoint;
-        this.startedAt = new Date(jsonContainer.StartedAt * 1000);
-        if (jsonContainer.Ports === "") {
-            this.ports = "n/a";
-        } else {
-            this.ports = jsonContainer.Ports?.map(e => `host ${e.host_ip}:${e.host_port}/${e.protocol} -> pod ${e.container_port}`);
-        }
     }
 
     start() {
-        runCommand("start", this.name);
+        runCommand("start", this.Id);
     }
 
     rm() {
-        runCommand("rm", this.name);
+        runCommand("rm", this.Id);
     }
 
     stop() {
-        runCommand("stop", this.name);
+        runCommand("stop", this.Id);
     }
 
     restart() {
-        runCommand("restart", this.name);
+        runCommand("restart", this.Id);
     }
 
     pause() {
-        runCommand("pause", this.name);
+        runCommand("pause", this.Id);
     }
 
     unpause() {
-        runCommand("unpause", this.name);
+        runCommand("unpause", this.Id);
     }
 
     logs() {
-        console.debug(`this state ${this.state} and is this === running ${this.state === "running"}`);
-        runCommandInTerminal(this.terminal, "podman logs -f", this.name, "", this.state === "running" ? TERM_CLOSE_ON_EXIT : TERM_KEEP_ON_EXIT);
+        console.debug(`this state ${this.state} and is this === running ${this.State === "running"}`);
+        runCommandInTerminal(this.terminal, "podman logs -f", this.Id, "", this.State === "running" ? TERM_CLOSE_ON_EXIT : TERM_KEEP_ON_EXIT);
     }
 
     watchTop() {
-        runCommandInTerminal(this.terminal, "watch podman top", this.name, "");
+        runCommandInTerminal(this.terminal, "watch podman top", this.Id, "");
     }
 
     shell() {
-        runCommandInTerminal(this.terminal, "podman exec -it", this.name, "/bin/sh");
+        runCommandInTerminal(this.terminal, "podman exec -it", this.Id, "/bin/sh");
     }
 
     stats() {
-        runCommandInTerminal(this.terminal, "podman stats", this.name, "");
+        runCommandInTerminal(this.terminal, "podman stats", this.Id, "");
     }
 
     async inspect() {
-        const out = await runCommand("inspect --format json", this.name);
+        const out = await runCommand("inspect --format json", this.Id);
         let json = JSON.parse(out);
         if (json.length > 0 && json[0].NetworkSettings !== null) {
             const ipAddress = JSON.stringify(json[0].NetworkSettings.IPAddress);
-            this.ipAddress = ipAddress  ? "n/a" : ipAddress;
+            this.ipAddress = ipAddress ? "n/a" : ipAddress;
         }
     }
 
     toString() {
-        return `name:   ${this.name}
-                id:     ${this.id}
-                state:  ${this.state}
-                status: ${this.status}
-                image:  ${this.image}`;
+        return `name:    ${this.name}
+                id:      ${this.id}
+                state:   ${this.state}
+                status:  ${this.status}
+                image:   ${this.image}
+                created: ${this.createdAt}`;
+
     }
 
     details() {
         const containerDetails = [
+            `State: ${this.state}`,
             `Status: ${this.status}`,
             `Image: ${this.image}`,
             `Created: ${this.createdAt}`,
-            `Started: ${this.startedAt !== null ? this.startedAt : "never"}`,
         ];
         if (this.Command !== null) {
             containerDetails.push(`Command: ${this.command}`);
@@ -149,8 +156,8 @@ class Container {
         containerDetails.push(`Ports: ${this.ports}`);
 
         // add more stats and info - inspect - SLOW
-        this.inspect();
-        containerDetails.push(`IP Address: ${this.ipAddress}`);
+        //this.inspect();
+        //containerDetails.push(`IP Address: ${this.ipAddress}`);
         return containerDetails.join("\n");
     }
 }
@@ -159,23 +166,14 @@ class Container {
  * discoverPodmanVersion fetches the podman version from cli
  */
 async function discoverPodmanVersion() {
-    let versionJson;
-
     try {
-        const out = await spawnCommandline("podman version --format json");
-        versionJson = JSON.parse(out);
+        let v = await PodmanApi.request('/version');
+        podmanVersion = new Version(v.Version);
+        console.debug("new version ", podmanVersion)
     } catch (e) {
         console.error(e.message);
         throw new Error("Error getting podman version");
     }
-
-    const versionString = versionJson?.Client?.Version;
-    if (versionString) {
-        podmanVersion = new Version(versionString);
-    } else {
-        console.warn("unable to set podman info, will fall back to syntax and output < 2.0.3");
-    }
-    console.debug(podmanVersion);
 }
 
 class Version {
@@ -183,9 +181,15 @@ class Version {
         const splits = v.split(".");
         this.major = splits[0];
         this.minor = splits[1];
+        this.preRelease = '';
         if (splits.length > 2) {
-            this.patch = splits[2];
+            let patchWithPreRlease = splits.slice(2).join('.').split("-");
+            this.patch = patchWithPreRlease[0];
+            if (patchWithPreRlease[1]) {
+                this.preRelease = patchWithPreRlease.slice(1).join('-');
+            }
         }
+
     }
 
     newerOrEqualTo(v) {
@@ -193,6 +197,7 @@ class Version {
     }
 
     compare(other) {
+        console.log(`comparing ${this} with ${other}`);
         console.debug(`compare ${this} with ${other}`);
         if (this.major !== other.major) {
             return Math.sign(this.major - other.major);
@@ -204,13 +209,29 @@ class Version {
             if (this.patch === null) {
                 return -1;
             }
+            console.log(`comparing patch ${this.patch} to ${other.patch}`);
             return this.patch.localeCompare(other.patch);
+        }
+        if (this.preRelease !== other.preRelease) {
+            if (this.preRelease == '') {
+                return 1;
+            }
+            if (other.preRelease == '') {
+                return -1;
+            }
+
+            console.log(`comparing prerelese ${this.preRelease} to ${other.preRelease}`);
+            return this.preRelease?.localeCompare(other.preRelease);
         }
         return 0;
     }
 
     toString() {
-        return `major: ${this.major} minor: ${this.minor} patch: ${this.patch}`;
+        let v = `${this.major}.${this.minor}.${this.patch}`;
+        if (this.preRelease) {
+            v = `${v}.${this.preRelease}`;
+        }
+        return v
     }
 }
 
@@ -336,4 +357,52 @@ async function _read(inputStream, onEvent) {
         }
     });
 }
+
+export class Pod {
+    // settings: the extension's Gio.settings
+    constructor(jsonPod, settings) {
+        console.debug(`JSON pod -  ${jsonPod}`);
+        console.debug(`settings -  ${settings}`);
+        Object.assign(this, jsonPod);
+        this.terminal = settings.get_string("terminal");
+    }
+
+    start() {
+        PodmanApi.request(`pods/${this.Id}/start`, "POST");
+    }
+
+    rm() {
+        PodmanApi.request(`pods/${this.Id}`, "DELETE");
+    }
+
+    stop() {
+        PodmanApi.request(`pods/${this.Id}/stop`, "POST");
+    }
+
+    restart() {
+        PodmanApi.request(`pods/${this.Id}/restart`, "POST");
+    }
+
+    pause() {
+        PodmanApi.request(`pods/${this.Id}/pause`, "POST");
+    }
+
+    unpause() {
+        PodmanApi.request(`pods/${this.Id}/unpause`, "POST");
+    }
+
+    logs() {
+        runCommandInTerminal(this.terminal, "podman pod logs -f", this.Id, "", this.State === "running" ? TERM_CLOSE_ON_EXIT : TERM_KEEP_ON_EXIT);
+    }
+
+    watchTop() {
+        runCommandInTerminal(this.terminal, "watch podman pod top", this.Id, "");
+    }
+
+    stats() {
+        runCommandInTerminal(this.terminal, "podman pod stats", this.Id, "");
+    }
+
+}
+
 

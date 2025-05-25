@@ -6,29 +6,26 @@ import St from "gi://St";
 import Gio from "gi://Gio";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
-import * as Dialog from "resource:///org/gnome/shell/ui/dialog.js";
-import * as ModalDialog from "resource:///org/gnome/shell/ui/modalDialog.js";
-import GObject from "gi://GObject";
-
-import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
-
+import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
+import { ContainerSubMenuItem, PodSubMenuItem, ImageSubMenuItem, VolumeSubMenuItem, NetworkSubMenuItem } from "./modules/ui.js";
 import * as Podman from "./modules/podman.js";
+import * as PodmanApi from "./modules/podman-socket-api.js";
 
 export default class ContainersExtension extends Extension {
     /**
      * enable is the entry point called by gnome-shell
      */
-    enable() {
+    async enable() {
         console.log(`enabling ${this.uuid} extension`);
         this._indicator = new PanelMenu.Button(0.0, this.metadata.name, false);
         this.menu = this._indicator.menu;
         this._settings = this.getSettings();
 
         this._indicator.menu.box.add_style_class_name("containers-extension-menu");
-        const hbox = new St.BoxLayout({style_class: "panel-status-menu-box"});
+        const hbox = new St.BoxLayout({ style_class: "panel-status-menu-box" });
         const ext = Extension.lookupByUUID("containers@royg");
         const gicon = Gio.icon_new_for_string(`${ext.path}/podman-icon.png`);
-        const icon = new St.Icon({gicon, icon_size: "24"});
+        const icon = new St.Icon({ gicon, icon_size: "24" });
         this._indicator.add_child(icon);
         this._indicator.add_child(hbox);
 
@@ -41,14 +38,14 @@ export default class ContainersExtension extends Extension {
             }
         });
         Main.panel.addToStatusArea(this.uuid, this._indicator);
-        this._renderMenu();
+        await this._renderMenu();
     }
 
 
     /**
      * disable is called when the main extension menu is closed
      */
-    disable() {
+    async disable() {
         console.log("disabling containers extension");
         this._indicator?.destroy();
         this._indicator = null;
@@ -65,7 +62,7 @@ export default class ContainersExtension extends Extension {
     async _stop_sync() {
         try {
             const out = this.podmanListenCmd?.get_stdout_pipe();
-            await out.close_async(0, null, () => {});
+            await out.close_async(0, null, () => { });
             await this.podmanListenCmd.force_exit();
             console.debug(`podman events process status ${this.podmanListenCmd.get_status()}`);
         } catch (e) {
@@ -74,196 +71,241 @@ export default class ContainersExtension extends Extension {
     }
 
     async _renderMenu() {
+        this.menu.removeAll();
+        const prefs = new PopupMenu.PopupMenuItem("Preferences");
+        prefs.connect("activate", () => this.openPreferences());
+        this.menu.addMenuItem(prefs);
+
+        if (!PodmanApi.isPodmanSocketActive()) {
+            const activatePodmanSocket = new PopupMenu.PopupMenuItem("Activate Podman User Socket")
+            activatePodmanSocket.connect("activate", () => {
+                Podman.spawnCommandline("systemctl --user enable --now podman.socket");
+                Main.notify("Gnome Shell Extension Containers started user podman.socket");
+            });
+            this.menu.addMenuItem(activatePodmanSocket);
+            return;
+        }
+        await Podman.init();
+        prefs.connect("activate", () => this.openPreferences());
+
+        this.entitiesButtonSections = new PopupMenu.PopupMenuSection();
+        this.entitiesButtonSections.actor.add_style_class_name('entities-buttons');
+        this.entitiesSection = new PopupMenu.PopupMenuSection();
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addMenuItem(this.entitiesButtonSections);
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addMenuItem(this.entitiesSection);
+        await this.addRadioButtonsToMenu();
+    }
+
+    async renderContainersMenu() {
+        this.entitiesSection.removeAll();
+        const pruneContainers = new PopupMenu.PopupMenuItem("Prune Containers");
+        pruneContainers.connect("activate",
+            () => Podman.spawnCommandline("podman container prune -f"));
+        this.entitiesSection.addMenuItem(pruneContainers);
+        const newContainer = new PopupMenu.PopupMenuItem("New Fedora rawhide Container");
+        newContainer.connect("activate",
+            () => Podman.spawnCommandline("podman run -di registry.fedoraproject.org/fedora-minimal:rawhide /bin/bash"));
+        this.entitiesSection.addMenuItem(newContainer);
+        this.entitiesSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
         try {
             const containers = await Podman.getContainers(this._settings);
             console.debug(`found ${containers.length} containers`);
-
-            this.menu.removeAll();
-
-            const prefs = new PopupMenu.PopupMenuItem("Preferences");
-            prefs.connect("activate", () => this.openPreferences());
-
-            const prune = new PopupMenu.PopupMenuItem("Prune Containers");
-            prune.connect("activate",
-                () => Podman.spawnCommandline("podman container prune -f"));
-
-            const newContainer = new PopupMenu.PopupMenuItem("New Fedora rawhide Container");
-            newContainer.connect("activate",
-                () => Podman.spawnCommandline("podman run -di registry.fedoraproject.org/fedora-minimal:rawhide /bin/bash"));
-
-            this.menu.addMenuItem(prefs);
-            this.menu.addMenuItem(prune);
-            this.menu.addMenuItem(newContainer);
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
             if (containers.length > 0) {
                 containers.forEach(container => {
                     console.debug(container.toString());
-                    this.menu.addMenuItem(new ContainerSubMenuItem(container, {extraInfo: this._settings.get_boolean("extra-info")}));
+                    this.entitiesSection.addMenuItem(new ContainerSubMenuItem(container, { extraInfo: this._settings.get_boolean("extra-info") }));
                 });
             } else {
-                this.menu.addMenuItem(new PopupMenu.PopupMenuItem("No containers detected"));
+                this.entitiesSection.addMenuItem(new PopupMenu.PopupMenuItem("No containers found"));
             }
         } catch (err) {
-            this.menu.removeAll();
-            const errMsg = "Error occurred when fetching containers";
-            this.menu.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
+            this.entitiesSection.removeAll();
+            const errMsg = `Error occurred when fetching containers ${err}`;
+            this.entitiesSection.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
             console.error(`${errMsg}: ${err}`);
         }
     }
-}
 
-class ContainerSubMenuItem extends PopupMenu.PopupSubMenuMenuItem {
-    static {
-        GObject.registerClass(this);
+    async renderPodsMenu() {
+        this.entitiesSection.removeAll();
+        try {
+            const pods = await PodmanApi.request('pods/json');
+            console.debug(`found ${pods.length} pods`);
+
+            if (pods.length > 0) {
+                pods.forEach(p => {
+                    console.debug(p);
+                    console.debug(`setting ${this._settings}`);
+                    this.entitiesSection.addMenuItem(
+                        new PodSubMenuItem(new Podman.Pod(p, this._settings)));
+                });
+            } else {
+                this.entitiesSection.addMenuItem(
+                    new PopupMenu.PopupMenuItem("No pods found"));
+            }
+        } catch (err) {
+            this.entitiesSection.removeAll();
+            const errMsg = `Error occurred when fetching pods ${err}`;
+            this.entitiesSection.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
+            console.error(`${errMsg}: ${err}`);
+        }
     }
 
-    constructor(container, settings) {
-        super(container.name);
-        this.menu.box.add_style_class_name("container-menu-item");
-        const label = new St.Label({text: container.image});
-        label.add_style_class_name("container-name-label");
-        const actions = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false, style_class: "container-action-bar"});
-        actions.actor.set_x_expand(true);
-        actions.actor.set_x_align(Clutter.ActorAlign.END);
-        // this.insert_child_at_index(actions, 2);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+    async renderImagesMenu() {
+        this.entitiesSection.removeAll();
+        const pruneImages = new PopupMenu.PopupMenuItem("Prune Images");
+        pruneImages.connect("activate",
+            () => PodmanApi.request("images/prune", "POST"));
+        this.entitiesSection.addMenuItem(pruneImages);
+        this.entitiesSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        const startBtn = createActionButton(() => container.start(), "media-playback-start-symbolic");
-        const stopBtn = createActionButton(() => container.stop(), "media-playback-stop-symbolic");
-        const restartBtn = createActionButton(() => container.restart(), "system-reboot-symbolic");
-        const pauseBtn = createActionButton(
-            () => {
-                if (container.status.split(" ")[0] === "running") {
-                    container.pause();
-                }
-                if (container.status.split(" ")[0] === "paused") {
-                    container.unpause();
-                }
-            },
-            "media-playback-pause-symbolic"
-        );
-        pauseBtn.toggle_mode = true;
-        const deleteBtn = createActionButton(
-            () => new RemoveContainerDialog(container).open(1, true),
-            "user-trash-symbolic");
+        try {
+            const images = await PodmanApi.request('images/json?dangling=false');
+            console.debug(`found ${images.length} images`);
 
-        switch (container.status.split(" ")[0]) {
-            case "Exited":
-            case "exited":
-            case "Created":
-            case "created":
-            case "configured":
-            case "stopped": {
-                pauseBtn.reactive = false;
-                this.insert_child_at_index(createIcon("media-playback-stop-symbolic", "status-stopped"), 1);
-                // the element on index 3 is the expander, a spacer that clutter fills with space
-                this.insert_child_at_index(startBtn, 4);
-                break;
+            if (images.length > 0) {
+                images.forEach(image => {
+                    if (image.Dangling == true) { return; }
+                    console.debug(`${image.Names}`);
+                    this.entitiesSection.addMenuItem(new ImageSubMenuItem(image, this._settings));
+                });
+            } else {
+                this.entitiesSection.addMenuItem(new PopupMenu.PopupMenuItem("No images found"));
             }
-            case "Up":
-            case "running": {
-                deleteBtn.reactive = false;
-                pauseBtn.checked = false;
-                this.insert_child_at_index(createIcon("media-playback-start-symbolic", "status-running"), 1);
-                // the element on index 3 is the expander, a spacer that clutter fills with space
-                this.insert_child_at_index(stopBtn, 4);
-                break;
+        } catch (err) {
+            this.entitiesSection.removeAll();
+            const errMsg = `Error occurred when fetching images ${err}`;
+            this.entitiesSection.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
+            console.error(`${errMsg}: ${err}`);
+        }
+
+    }
+
+    async renderVolumesMenu() {
+        this.entitiesSection.removeAll();
+        try {
+            const volumes = await PodmanApi.request('volumes/json');
+            console.debug(`found ${volumes.length} volumes`);
+
+            if (volumes.length > 0) {
+                volumes.slice(0, 10).forEach(volume => {
+                    console.debug(`${volume.Name}`);
+                    this.entitiesSection.addMenuItem(new VolumeSubMenuItem(volume, this._settings));
+                });
+            } else {
+                this.entitiesSection.addMenuItem(new PopupMenu.PopupMenuItem("No volumes found"));
             }
-            case "Paused":
-            case "paused": {
-                pauseBtn.checked = true;
-                this.insert_child_at_index(createIcon("media-playback-pause-symbolic", "status-paused"), 1);
-                break;
+        } catch (err) {
+            this.entitiesSection.removeAll();
+            const errMsg = `Error occurred when fetching volumes ${err}`;
+            this.entitiesSection.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
+            console.error(`${errMsg}: ${err}`);
+        }
+
+    }
+
+    async renderNetworksMenu() {
+        this.entitiesSection.removeAll();
+        try {
+            const networks = await PodmanApi.request('networks/json');
+            console.debug(`found ${networks.length} networks`);
+
+            if (networks.length > 0) {
+                networks.slice(0, 10).forEach(network => {
+                    console.debug(`${network.Name}`);
+                    this.entitiesSection.addMenuItem(new NetworkSubMenuItem(network, this._settings));
+                });
+            } else {
+                this.entitiesSection.addMenuItem(new PopupMenu.PopupMenuItem("No networks found"));
             }
+        } catch (err) {
+            this.entitiesSection.removeAll();
+            const errMsg = `Error occurred when fetching networks ${err}`;
+            this.entitiesSection.addMenuItem(new PopupMenu.PopupMenuItem(errMsg));
+            console.error(`${errMsg}: ${err}`);
+        }
+
+    }
+
+    async addRadioButtonsToMenu() {
+        this.entitiesButtonSections.addMenuItem(new PopupMenu.PopupMenuItem(""));
+        this._radioItems = [];
+        const radioOptions = ['Containers', 'Pods', 'Images', 'Volumes', 'Networks'];
+        radioOptions.forEach(option => {
+            let button = new St.Button({
+                label: `${option}`,
+                style_class: 'popup-menu-item'
+            });
+
+            this.entitiesButtonSections.box.get_children().at(0).insert_child_at_index(button, -1);
+            this._radioItems.push(button);
+
+            if (option == this._activeRadioChoice) {
+                button.checked = true;
+                button.set_style("background-color: -st-accent-color;");
+            } else {
+                button.checked = false;
+            }
+
+            button.connect('event', (_, event) => {
+                if (event.type() == Clutter.EventType.BUTTON_RELEASE) {
+                    this.onRadioOptionSelected(option);
+                    return false;
+                }
+                return Clutter.EVENT_PROPOGATE;
+            });
+            button.connect('notify::checked', () => {
+                if (button.get_checked()) {
+                    button.set_style("background-color: -st-accent-color;");
+                } else {
+                    button.set_style('popup-menu-item');
+                }
+            });
+        });
+        await this.onRadioOptionSelected('Containers');
+    }
+
+    async onRadioOptionSelected(selectedOption) {
+        console.log(`activerRadio choice ${this._activeRadioChoice}`);
+        console.log(`selected option ${selectedOption}`);
+
+        //if (this._activeRadioChoice === selectedOption) {
+        //   return;
+        //}
+        this._activeRadioChoice = selectedOption;
+
+        this._radioItems.forEach(button => {
+            if (button.label == selectedOption) {
+                button.checked = true;
+            } else {
+                button.checked = false;
+            }
+        });
+
+        console.log(`Radio option selected: ${selectedOption}`);
+        switch (selectedOption) {
+            case "Containers":
+                await this.renderContainersMenu()
+                break;
+            case "Pods":
+                await this.renderPodsMenu()
+                break;
+            case "Images":
+                await this.renderImagesMenu()
+                break;
+            case "Volumes":
+                await this.renderVolumesMenu()
+                break;
+            case "Networks":
+                await this.renderNetworksMenu()
+                break;
             default:
-                this.insert_child_at_index(createIcon("action-unavailable-symbolic", "status-undefined"), 1);
+                console.log('nothing to render');
                 break;
         }
-        // the element on index 3 is the expander, a spacer that clutter fills with space
-        this.insert_child_at_index(restartBtn, 4);
-        this.insert_child_at_index(pauseBtn, 4);
-        this.insert_child_at_index(deleteBtn, 4);
-
-        if (settings.extraInfo) {
-            const info = new PopupMenu.PopupMenuItem(`${container.details()}`);
-            info.add_style_class_name("container-info");
-            this.menu.addMenuItem(info);
-            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        }
-
-        this.menu.addAction("Show Logs", () => container.logs());
-        this.menu.addAction("Watch Top", () => container.watchTop());
-        this.menu.addAction("Open Shell", () => container.shell());
-        this.menu.addAction("Watch Statistics", () => container.stats());
-        this.menu.addAction("Copy Container Details", () => setClipboard(container.details()));
-        // the css nth- or last-of-type is probably not implemented in gjs
-        this.menu.box.get_children().at(-1).add_style_class_name("last-container-menu-item");
     }
 }
 
-/**
- * set clipboard with @param text
- * @param {string} text to set the clipboard with
- */
-function setClipboard(text) {
-    St.Clipboard.get_default().set_text(St.ClipboardType.PRIMARY, text);
-}
-
-/**
- * creates a button for a primary container action
- * @param {Function} command is the action executed when clicking the button
- * @param {string} iconName is the icon name
- * @returns {St.Button} new icon
- */
-function createActionButton(command, iconName) {
-    const btn = new St.Button({
-        track_hover: true,
-        style_class: "containers-action-button button",
-    });
-    btn.child = new St.Icon({
-        icon_name: iconName,
-        style_class: "popup-menu-icon",
-    });
-    btn.connect("clicked", () => {
-        command();
-    });
-    return btn;
-}
-
-class RemoveContainerDialog extends ModalDialog.ModalDialog {
-    static {
-        GObject.registerClass(this);
-    }
-
-    constructor(container) {
-        super();
-        const content = new Dialog.MessageDialogContent({
-            title: "Remove Container",
-            description: `Are you sure you want to remove container ${container.name}?`,
-        });
-        this.contentLayout.add_child(content);
-        this.addButton({
-            action: () => this.close(),
-            label: "Cancel",
-            key: Clutter.KEY_Escapse,
-        });
-        this.addButton({
-            action: () =>  {
-                this.close();
-                container.rm();
-            },
-            label: "Remove",
-        });
-    }
-}
-
-/**
- * createIcon is just a convenience shortcut for standard icons
- * @param {string} name is icon name
- * @param {string} styleClass is style_class
- * @returns {St.icon} new icon
- */
-function createIcon(name, styleClass) {
-    return new St.Icon({icon_name: name, style_class: `${styleClass} popup-menu-icon`});
-}

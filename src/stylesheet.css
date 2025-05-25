@@ -28,7 +28,11 @@
 }
 
 .container-menu-item .popup-menu-item {
-    animation: ease-in;
+    animation: ease-in-out;
+    background-color: transparent;
+    color: white;
+    transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1),
+        color 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .container-menu-item .popup-separator-menu-item {
@@ -46,8 +50,14 @@
 .containers-action-button .popup-menu-icon {
     width: 12px;
 }
+
 .container-action-bar {
     background-color: red;
+}
+
+.entities-buttons .popup-menu-item {
+    font-weight: bold;
+    border-radius: 10px;
 }
 
 .container-name-label {
@@ -61,6 +71,7 @@
 }
 
 .container-info {
-    font-size: 10px;
+    /*
     font-family: monospace;
+    */
 }
