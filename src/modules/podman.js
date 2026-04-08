@@ -9,8 +9,11 @@ const TERM_CLOSE_ON_EXIT = false;
 
 Gio._promisify(Gio.Subprocess.prototype,
     "communicate_utf8_async", "communicate_utf8_finish");
+Gio._promisify(Gio.InputStream.prototype,
+    "read_bytes_async", "read_bytes_finish");
 
 let podmanVersion;
+let discoveringPodmanVersion = null;
 
 /**
  * Get a list of containers
@@ -19,7 +22,10 @@ let podmanVersion;
  */
 export async function getContainers(settings) {
     if (podmanVersion === undefined) {
-        await discoverPodmanVersion();
+        if (!discoveringPodmanVersion) {
+            discoveringPodmanVersion = discoverPodmanVersion();
+        }
+        await discoveringPodmanVersion;
     }
 
     let jsonContainers;
@@ -64,8 +70,14 @@ class Container {
         }
 
         this.image = jsonContainer.Image;
-        this.command = jsonContainer.Cmd;
-        this.entrypoint = jsonContainer.Entrypoint;
+        this.command = jsonContainer.Cmd || jsonContainer.Command;
+        this.entrypoint = jsonContainer.Entrypoint || jsonContainer.entrypoint;
+        if (Array.isArray(this.entrypoint)) {
+            this.entrypoint = this.entrypoint.join(" ");
+        }
+        if (Array.isArray(this.command)) {
+            this.command = this.command.join(" ");
+        }
         this.startedAt = new Date(jsonContainer.StartedAt * 1000);
         if (jsonContainer.Ports === "") {
             this.ports = "n/a";
@@ -117,11 +129,26 @@ class Container {
     }
 
     async inspect() {
+        this.ipAddress = "n/a";
         const out = await runCommand("inspect --format json", this.name);
         let json = JSON.parse(out);
-        if (json.length > 0 && json[0].NetworkSettings !== null) {
-            const ipAddress = JSON.stringify(json[0].NetworkSettings.IPAddress);
-            this.ipAddress = ipAddress  ? "n/a" : ipAddress;
+        if (json.length > 0) {
+            const config = json[0];
+            if (config.NetworkSettings?.IPAddress) {
+                this.ipAddress = config.NetworkSettings.IPAddress;
+            }
+            if (config.Config?.Entrypoint) {
+                this.entrypoint = config.Config.Entrypoint;
+                if (Array.isArray(this.entrypoint)) {
+                    this.entrypoint = this.entrypoint.join(" ");
+                }
+            }
+            if (config.Config?.Cmd) {
+                this.command = config.Config.Cmd;
+                if (Array.isArray(this.command)) {
+                    this.command = this.command.join(" ");
+                }
+            }
         }
     }
 
@@ -133,25 +160,25 @@ class Container {
                 image:  ${this.image}`;
     }
 
-    details() {
+    async details() {
         const containerDetails = [
             `Status: ${this.status}`,
             `Image: ${this.image}`,
             `Created: ${this.createdAt}`,
             `Started: ${this.startedAt !== null ? this.startedAt : "never"}`,
         ];
-        if (this.Command !== null) {
-            containerDetails.push(`Command: ${this.command}`);
-        }
 
-        if (this.entrypoint !== null) {
-            containerDetails.push(`Entrypoint: ${this.entrypoint}`);
-        }
         containerDetails.push(`Ports: ${this.ports}`);
 
         // add more stats and info - inspect - SLOW
-        this.inspect();
+        await this.inspect();
         containerDetails.push(`IP Address: ${this.ipAddress}`);
+        if (this.entrypoint) {
+            containerDetails.push(`Entrypoint: ${this.entrypoint}`);
+        }
+        if (this.command) {
+            containerDetails.push(`Command: ${this.command}`);
+        }
         return containerDetails.join("\n");
     }
 }
@@ -293,12 +320,19 @@ function runCommandInTerminal(terminal, command, containerName, args, keepOpenOn
  * @returns {Gio.Subprocess} process - The process handle
  */
 export async function newEventsProcess(onEvent) {
+    if (podmanVersion === undefined) {
+        if (!discoveringPodmanVersion) {
+            discoveringPodmanVersion = discoverPodmanVersion();
+        }
+        await discoveringPodmanVersion;
+    }
+
     try {
         const cmdline = "podman events --filter type=container --format '{\"name\": \"{{ .Name }}\"}'";
         const [, argv] = GLib.shell_parse_argv(cmdline);
         const process = Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
         const pipe = process.get_stdout_pipe();
-        await _read(pipe, onEvent);
+        _read(pipe, onEvent);
         return process;
     } catch (e) {
         console.error(e.message);
@@ -312,29 +346,31 @@ export async function newEventsProcess(onEvent) {
  * @param {Function} onEvent - Function to apply on each container event
  */
 async function _read(inputStream, onEvent) {
-    await inputStream.read_bytes_async(4096, GLib.PRIORITY_DEFAULT, null, (source, result) => {
-        const rawjson = new TextDecoder().decode(source.read_bytes_finish(result).toArray());
-        console.debug(`raw json answer: ${rawjson}`);
-        if (rawjson === "") {
-            // no output is EOF, no need to continue processing
-            return;
-        }
-        const rawjsonArray = rawjson.split(/\n/);
-        rawjsonArray.forEach(j => {
-            if (j !== "") {
-                try {
-                    const containerEvent = JSON.parse(j);
-                    console.debug(`firing callback on container event ${containerEvent}`);
-                    onEvent(containerEvent);
-                } catch (e) {
-                    console.error(`json parse error ${e}`);
-                }
+    while (true) {
+        try {
+            const result = await inputStream.read_bytes_async(4096, GLib.PRIORITY_DEFAULT, null); // eslint-disable-line no-await-in-loop
+            const rawjson = new TextDecoder().decode(result.toArray());
+            console.debug(`raw json answer: ${rawjson}`);
+            if (rawjson === "") {
+                // no output is EOF, no need to continue processing
+                break;
             }
-        });
-        if (!source.is_closed()) {
-            // keep reading
-            _read(source, onEvent);
+            const rawjsonArray = rawjson.split(/\n/);
+            rawjsonArray.forEach(j => {
+                if (j !== "") {
+                    try {
+                        const containerEvent = JSON.parse(j);
+                        console.debug(`firing callback on container event ${containerEvent}`);
+                        onEvent(containerEvent);
+                    } catch (e) {
+                        console.error(`json parse error ${e}`);
+                    }
+                }
+            });
+        } catch (e) {
+            console.error(`Error reading stream: ${e}`);
+            break;
         }
-    });
+    }
 }
 

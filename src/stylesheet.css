@@ -1,66 +1,77 @@
 .containers-extension-menu {
-    width: 480px;
+    width: 30em;
 }
 
+.containers-scroll-view {
+    max-height: 35em;
+    background-color: transparent !important;
+}
+
+/* Invisible wrapper for the scroll view to prevent "whole box" highlighting
+   while keeping it reactive (so it's not dimmed) */
+.containers-scroll-item,
+.containers-scroll-item:hover,
+.containers-scroll-item:focus,
+.containers-scroll-item:active,
+.containers-scroll-item:checked {
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Adwaita-inspired colors */
 .status-running {
-    color: lawngreen;
+    color: #33d17a; /* Green 3 */
 }
 
 .status-stopped {
-    color: red;
+    color: #e01b24; /* Red 3 */
 }
 
 .status-remove {
-    color: LightSlateGray;
+    color: #9a9996; /* Gray 4 */
 }
 
 .status-undefined {
-    color: SkyBlue;
+    color: #3584e4; /* Blue 3 */
 }
 
+/* Updated button styling to blend better */
 .containers-extension-menu .button:checked {
-    color: #eeeeec;
-    background-color: #2d2d2d;
-    border-color: #191919;
-    text-shadow: none;
-    icon-shadow: none;
-    box-shadow: none;
-}
-
-.container-menu-item .popup-menu-item {
-    animation: ease-in;
+    color: inherit;
+    background-color: rgba(127, 127, 127, 0.15);
+    border-color: transparent;
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.2);
 }
 
 .container-menu-item .popup-separator-menu-item {
-    margin-right: 0px;
+    margin-right: 0;
 }
 
 .containers-action-button {
-    width: 20px;
-    /*border-radius: 10px; */
-    border: none;
-    background: inherit;
-    padding: 0px;
+    width: 24px;
+    height: 24px;
+    border: 1px solid transparent;
+    border-radius: 99px;
+    background: transparent;
+    padding: 0;
+    margin: 0 2px;
+}
+
+.containers-action-button:hover {
+    background-color: rgba(127, 127, 127, 0.15);
+}
+
+.containers-action-button:active {
+    background-color: rgba(127, 127, 127, 0.25);
 }
 
 .containers-action-button .popup-menu-icon {
-    width: 12px;
+    width: 16px;
+    icon-size: 16px;
 }
+
 .container-action-bar {
-    background-color: red;
-}
-
-.container-name-label {
-    position: relative;
-    vertical-align: text-bottom;
-    margin-top: 5px;
-    font-size: 9px;
-    font-variant: small-caps;
-    font-style: italic;
-    font-family: monospace;
-}
-
-.container-info {
-    font-size: 10px;
-    font-family: monospace;
+    background-color: transparent;
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
