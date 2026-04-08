@@ -1,1 +1,18 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build Artifacts
+*.tar.gz
 *.zip
+rpms/
+src/schemas/gschemas.compiled
+
+# IDEs and Tools
+.idea/
+tags
+todo.md
+
+# System files
+.DS_Store
+*~
