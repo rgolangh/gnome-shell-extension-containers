@@ -108,7 +108,8 @@ class Container {
     }
 
     shell() {
-        runCommandInTerminal(this.terminal, "podman exec -it", this.name, "/bin/sh");
+        const loginShellCmd = "sh -c 's=${SHELL:-$(grep ^$(id -un): /etc/passwd 2>/dev/null | cut -d: -f7)}; exec ${s:-/bin/sh}'";
+        runCommandInTerminal(this.terminal, "podman exec -it", this.name, loginShellCmd);
     }
 
     stats() {
